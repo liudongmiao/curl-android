@@ -1,0 +1,11 @@
+bin
+gen
+obj
+libs
+ant.properties
+.ant-targets-build.xml
+build.xml
+local.properties
+proguard.cfg
+project.properties
+Makefile
