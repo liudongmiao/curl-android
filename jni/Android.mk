@@ -19,5 +19,5 @@ LOCAL_MODULE := http
 LOCAL_SRC_FILES := http.c
 LOCAL_STATIC_LIBRARIES := curl
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/curl/include $(LOCAL_PATH)/curl/lib
-LOCAL_LDFLAGS += -lssl -lcrypto -lz -L$(ANDROID_ROOT)/out/target/product/generic/system/lib
+LOCAL_LDFLAGS += -llog -lssl -lcrypto -lz -L$(ANDROID_ROOT)/out/target/product/generic/system/lib
 include $(BUILD_SHARED_LIBRARY)
