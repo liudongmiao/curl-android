@@ -117,6 +117,12 @@ public class Demo extends Activity
             // disable ssl verify
             curl_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
 
+            // enable cookie engine
+            curl_setopt(curl, CURLOPT_COOKIELIST, "");
+
+            // enable certificate chain info gatherer
+            curl_setopt(curl, CURLOPT_CERTINFO, 1);
+
             if (!curl_perform(curl)) {
                 data = curl_error();
             } else {
@@ -126,6 +132,22 @@ public class Demo extends Activity
                 data += "connect_time: " + curl_getinfo(curl, CURLINFO_CONNECT_TIME) + "\n";
                 data += "starttransfer_time: " + curl_getinfo(curl, CURLINFO_STARTTRANSFER_TIME) + "\n";
                 data += "redirect_time: " + curl_getinfo(curl, CURLINFO_REDIRECT_TIME) + "\n";
+            }
+
+            String[] cookies = curl_getinfo_list(curl, CURLINFO_COOKIELIST);
+            if (cookies != null) {
+                for (String cookie: cookies) {
+                    Log.d("CURL-J-COOKIE", cookie);
+                }
+            }
+
+            String[][] certinfos = curl_getinfo_certinfo(curl, CURLINFO_CERTINFO);
+            if (certinfos != null) {
+                for (String[] certinfo: certinfos) {
+                    for (String cert: certinfo) {
+                        Log.d("CURL-J-CERT", cert);
+                    }
+                }
             }
 
             curl_cleanup(curl);
