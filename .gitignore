@@ -1,11 +1,13 @@
 bin
 gen
 obj
-libs
+jni/ares
+jni/curl
 ant.properties
 .ant-targets-build.xml
 build.xml
 local.properties
 proguard.cfg
+proguard-project.txt
 project.properties
 Makefile

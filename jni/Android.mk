@@ -5,19 +5,28 @@ CFLAGS := -Wpointer-arith -Wwrite-strings -Wunused -Winline -Wnested-externs -Wm
 
 include $(CLEAR_VARS)
 include $(LOCAL_PATH)/curl/lib/Makefile.inc
-LOCAL_MODULE := curl
+LOCAL_MODULE := static-curl
 LOCAL_SRC_FILES := $(addprefix curl/lib/,$(CSOURCES))
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/curl/include $(LOCAL_PATH)/curl/lib $(ANDROID_ROOT)/external/openssl/include
-LOCAL_CFLAGS += $(CFLAGS) -DUSE_OPENSSL
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/curl/include $(LOCAL_PATH)/curl/lib $(LOCAL_PATH)/ares $(ANDROID_ROOT)/external/openssl/include
+LOCAL_CFLAGS += $(CFLAGS) -DHAVE_CONFIG_H
+LOCAL_STATIC_LIBRARIES := static-ares
 LOCAL_LDFLAGS := -lssl -lcrypto -lz -L$(ANDROID_ROOT)/out/target/product/generic/system/lib
-# LOCAL_COPY_HEADERS_TO := libcurl
-# LOCAL_COPY_HEADERS := $(addprefix curl/include/curl/,$(HHEADERS))
 include $(BUILD_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
-LOCAL_MODULE := http
-LOCAL_SRC_FILES := http.c
-LOCAL_STATIC_LIBRARIES := curl
+include $(LOCAL_PATH)/ares/Makefile.inc
+LOCAL_MODULE := static-ares
+LOCAL_SRC_FILES := $(addprefix ares/,$(CSOURCES))
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/ares
+LOCAL_CFLAGS += $(CFLAGS) -DHAVE_CONFIG_H
+include $(BUILD_STATIC_LIBRARY)
+
+# include $(BUILD_SHARED_LIBRARY)
+include $(CLEAR_VARS)
+LOCAL_MODULE := curl
+LOCAL_SRC_FILES := curl.c
+LOCAL_STATIC_LIBRARIES := static-curl
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/curl/include $(LOCAL_PATH)/curl/lib
+LOCAL_CFLAGS += $(CFLAGS)
 LOCAL_LDFLAGS += -llog -lssl -lcrypto -lz -L$(ANDROID_ROOT)/out/target/product/generic/system/lib
 include $(BUILD_SHARED_LIBRARY)

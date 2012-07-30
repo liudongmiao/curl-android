@@ -1,3 +1,16 @@
+/*
+ * vim: set sta sw=4 et:
+ *
+ * Copyright (C) 2012 Liu DongMiao <thom@piebridge.me>
+ *
+ * This program is free software. It comes without any warranty, to
+ * the extent permitted by applicable law. You can redistribute it
+ * and/or modify it under the terms of the Do What The Fuck You Want
+ * To Public License, Version 2, as published by Sam Hocevar. See
+ * http://sam.zoy.org/wtfpl/COPYING for more details.
+ *
+ */
+
 package me.piebridge.curl;
 
 public class Curl
@@ -255,20 +268,28 @@ public class Curl
     public static final int CURLOPT_WRITEDATA = CURLOPT_FILE;
     public static final int CURLOPT_READDATA = CURLOPT_INFILE;
 
-    public static final int CURLE_OK = 0;
+    public static final int CURL_IPRESOLVE_WHATEVER = 0;
+    public static final int CURL_IPRESOLVE_V4 = 1;
+    public static final int CURL_IPRESOLVE_V6 = 2;
 
     public static native int curl_init();
     public static native int curl_errno();
     public static native String curl_error();
     public static native boolean curl_setopt(int curl, int option, long value);
     public static native boolean curl_setopt(int curl, int option, String value);
-    public static native String curl_perform(int curl);
+    public static native boolean curl_setopt(int curl, int option, String[] value);
+    public static native boolean curl_setopt(int curl, int option, byte[] value);
+    public static native boolean curl_setopt(int curl, int option, Read value);
+    public static native boolean curl_setopt(int curl, int option, Write value);
+    public static native boolean curl_setopt(int curl, int option, Debug value);
+    public static native boolean curl_setopt(int curl, int option, Progress value);
+    public static native boolean curl_perform(int curl);
     public static native long curl_getinfo_long(int curl, int info);
     public static native double curl_getinfo_double(int curl, int info);
     public static native String curl_getinfo(int curl, int info);
     public static native void curl_cleanup(int curl);
 
     static {
-        System.loadLibrary("http");
+        System.loadLibrary("curl");
     }
 }

@@ -1,0 +1,795 @@
+/* vim: set sw=4 ts=4:
+ * Author: Liu DongMiao <liudongmiao@gmail.com>
+ * Created  : Thu 26 Jul 2012 02:13:55 PM CST
+ * Modified : Mon 30 Jul 2012 11:19:05 AM CST
+ *
+ * This program is free software. It comes without any warranty, to
+ * the extent permitted by applicable law. You can redistribute it
+ * and/or modify it under the terms of the Do What The Fuck You Want
+ * To Public License, Version 2, as published by Sam Hocevar. See
+ * http://sam.zoy.org/wtfpl/COPYING for more details.
+ *
+ */
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <errno.h>
+#include "curl/curl.h"
+
+#include <jni.h>
+#include <android/log.h>
+#define TAG "CURL-C"
+#define LOGE(...) (__android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__))
+#define LOGD(...) (__android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__))
+
+#define CLASSNAME "me/piebridge/curl/Curl"
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
+
+static CURLcode code;
+
+static jint curl_init(JNIEnv *env, jobject clazz)
+{
+	CURL *curl = curl_easy_init();
+	return (int)curl;
+}
+
+static jboolean curl_setopt_long(JNIEnv *env, jobject clazz, jint handle, jint option, jlong value)
+{
+	CURL *curl = (CURL *)handle;
+	if (NULL == curl) {
+		return JNI_FALSE;
+	}
+
+	switch (option) {
+		case CURLOPT_DNS_CACHE_TIMEOUT:
+		case CURLOPT_DNS_USE_GLOBAL_CACHE:
+		case CURLOPT_MAXCONNECTS:
+		case CURLOPT_FORBID_REUSE:
+		case CURLOPT_FRESH_CONNECT:
+		case CURLOPT_VERBOSE:
+		case CURLOPT_HEADER:
+		case CURLOPT_NOPROGRESS:
+		case CURLOPT_NOBODY:
+		case CURLOPT_FAILONERROR:
+		case CURLOPT_PUT:
+		case CURLOPT_FILETIME:
+		case CURLOPT_FTP_CREATE_MISSING_DIRS:
+		case CURLOPT_SERVER_RESPONSE_TIMEOUT:
+		case CURLOPT_TFTP_BLKSIZE:
+		case CURLOPT_DIRLISTONLY:
+		case CURLOPT_APPEND:
+		case CURLOPT_FTP_FILEMETHOD:
+		case CURLOPT_NETRC:
+		case CURLOPT_TRANSFERTEXT:
+		case CURLOPT_TIMECONDITION:
+		case CURLOPT_TIMEVALUE:
+		case CURLOPT_SSLVERSION:
+		case CURLOPT_AUTOREFERER:
+		case CURLOPT_TRANSFER_ENCODING:
+		case CURLOPT_FOLLOWLOCATION:
+		case CURLOPT_UNRESTRICTED_AUTH:
+		case CURLOPT_MAXREDIRS:
+		case CURLOPT_POSTREDIR:
+		case CURLOPT_POST:
+		case CURLOPT_POSTFIELDSIZE:
+		case CURLOPT_COOKIESESSION:
+		case CURLOPT_HTTPGET:
+		case CURLOPT_HTTP_VERSION:
+		case CURLOPT_HTTPPROXYTUNNEL:
+		case CURLOPT_PROXYPORT:
+		case CURLOPT_PROXYTYPE:
+		case CURLOPT_PROXY_TRANSFER_MODE:
+		case CURLOPT_SOCKS5_GSSAPI_NEC:
+		case CURLOPT_FTP_USE_EPRT:
+		case CURLOPT_FTP_USE_EPSV:
+		case CURLOPT_FTP_USE_PRET:
+		case CURLOPT_FTP_SSL_CCC:
+		case CURLOPT_FTP_SKIP_PASV_IP:
+		case CURLOPT_INFILESIZE:
+		case CURLOPT_LOW_SPEED_LIMIT:
+		case CURLOPT_LOW_SPEED_TIME:
+		case CURLOPT_PORT:
+		case CURLOPT_TIMEOUT:
+		case CURLOPT_TIMEOUT_MS:
+		case CURLOPT_CONNECTTIMEOUT:
+		case CURLOPT_CONNECTTIMEOUT_MS:
+		case CURLOPT_ACCEPTTIMEOUT_MS:
+		case CURLOPT_RESUME_FROM:
+		case CURLOPT_CRLF:
+		case CURLOPT_LOCALPORT:
+		case CURLOPT_LOCALPORTRANGE:
+		case CURLOPT_GSSAPI_DELEGATION:
+		case CURLOPT_SSL_VERIFYPEER:
+		case CURLOPT_SSL_VERIFYHOST:
+		case CURLOPT_CERTINFO:
+		case CURLOPT_BUFFERSIZE:
+		case CURLOPT_NOSIGNAL:
+		case CURLOPT_MAXFILESIZE:
+		case CURLOPT_USE_SSL:
+		case CURLOPT_SSL_OPTIONS:
+		case CURLOPT_FTPSSLAUTH:
+		case CURLOPT_IPRESOLVE:
+		case CURLOPT_TCP_NODELAY:
+		case CURLOPT_IGNORE_CONTENT_LENGTH:
+		case CURLOPT_CONNECT_ONLY:
+		case CURLOPT_SSL_SESSIONID_CACHE:
+		case CURLOPT_SSH_AUTH_TYPES:
+		case CURLOPT_HTTP_TRANSFER_DECODING:
+		case CURLOPT_HTTP_CONTENT_DECODING:
+		case CURLOPT_NEW_FILE_PERMS:
+		case CURLOPT_NEW_DIRECTORY_PERMS:
+		case CURLOPT_ADDRESS_SCOPE:
+		case CURLOPT_PROTOCOLS:
+		case CURLOPT_REDIR_PROTOCOLS:
+		case CURLOPT_RTSP_REQUEST:
+		case CURLOPT_RTSP_CLIENT_CSEQ:
+		case CURLOPT_RTSP_SERVER_CSEQ:
+		case CURLOPT_WILDCARDMATCH:
+		case CURLOPT_TCP_KEEPALIVE:
+		case CURLOPT_TCP_KEEPIDLE:
+		case CURLOPT_TCP_KEEPINTVL:
+		/* curl_off_t is int64_t, jlong */
+		case CURLOPT_POSTFIELDSIZE_LARGE:
+		case CURLOPT_INFILESIZE_LARGE:
+		case CURLOPT_MAX_SEND_SPEED_LARGE:
+		case CURLOPT_MAX_RECV_SPEED_LARGE:
+		case CURLOPT_RESUME_FROM_LARGE:
+		case CURLOPT_MAXFILESIZE_LARGE:
+			code = curl_easy_setopt(curl, option, value);
+			if (CURLE_OK == code) {
+				return JNI_TRUE;
+			}
+			break;
+		/* unsigned long */
+		case CURLOPT_HTTPAUTH:
+		case CURLOPT_PROXYAUTH:
+			code = curl_easy_setopt(curl, option, (unsigned long)value);
+			if (CURLE_OK == code) {
+				return JNI_TRUE;
+			}
+	}
+	return JNI_FALSE;
+}
+
+static jboolean curl_setopt_string(JNIEnv *env, jobject clazz, jint handle, jint option, jstring value)
+{
+	FILE *file;
+	char *param;
+	CURL *curl = (CURL *)handle;
+	if (NULL == curl) {
+		return JNI_FALSE;
+	}
+
+	switch (option) {
+		case CURLOPT_SSL_CIPHER_LIST:
+		case CURLOPT_RANDOM_FILE:
+		case CURLOPT_EGDSOCKET:
+		case CURLOPT_NETRC_FILE:
+		case CURLOPT_ACCEPT_ENCODING:
+		case CURLOPT_COPYPOSTFIELDS:
+		case CURLOPT_REFERER:
+		case CURLOPT_USERAGENT:
+		case CURLOPT_COOKIE:
+		case CURLOPT_COOKIEJAR:
+		case CURLOPT_COOKIELIST:
+		case CURLOPT_CUSTOMREQUEST:
+		case CURLOPT_PROXY:
+		case CURLOPT_SOCKS5_GSSAPI_SERVICE:
+		case CURLOPT_ERRORBUFFER:
+		case CURLOPT_FTPPORT:
+		case CURLOPT_URL:
+		case CURLOPT_USERPWD:
+		case CURLOPT_USERNAME:
+		case CURLOPT_PASSWORD:
+		case CURLOPT_PROXYUSERPWD:
+		case CURLOPT_PROXYUSERNAME:
+		case CURLOPT_PROXYPASSWORD:
+		case CURLOPT_NOPROXY:
+		case CURLOPT_RANGE:
+		case CURLOPT_SSLCERT:
+		case CURLOPT_SSLCERTTYPE:
+		case CURLOPT_SSLKEY:
+		case CURLOPT_SSLKEYTYPE:
+		case CURLOPT_KEYPASSWD:
+		case CURLOPT_SSLENGINE:
+		case CURLOPT_INTERFACE:
+		case CURLOPT_KRBLEVEL:
+		case CURLOPT_CAINFO:
+		case CURLOPT_CAPATH:
+		case CURLOPT_CRLFILE:
+		case CURLOPT_ISSUERCERT:
+		case CURLOPT_FTP_ACCOUNT:
+		case CURLOPT_FTP_ALTERNATIVE_TO_USER:
+		case CURLOPT_SSH_PUBLIC_KEYFILE:
+		case CURLOPT_SSH_PRIVATE_KEYFILE:
+		case CURLOPT_SSH_HOST_PUBLIC_KEY_MD5:
+		case CURLOPT_SSH_KNOWNHOSTS:
+		case CURLOPT_MAIL_FROM:
+		case CURLOPT_MAIL_AUTH:
+		case CURLOPT_RTSP_SESSION_ID:
+		case CURLOPT_RTSP_STREAM_URI:
+		case CURLOPT_RTSP_TRANSPORT:
+		case CURLOPT_TLSAUTH_USERNAME:
+		case CURLOPT_TLSAUTH_PASSWORD:
+		case CURLOPT_TLSAUTH_TYPE:
+		case CURLOPT_DNS_SERVERS:
+			param = (char *)(*env)->GetStringUTFChars(env, value, NULL);
+			code = curl_easy_setopt(curl, option, param);
+			(*env)->ReleaseStringUTFChars(env, value, param);
+			if (CURLE_OK == code) {
+				return JNI_TRUE;
+			}
+			break;
+		/* FILE */
+		case CURLOPT_FILE:
+		case CURLOPT_INFILE:
+		case CURLOPT_STDERR:
+		case CURLOPT_WRITEHEADER:
+			param = (char *)(*env)->GetStringUTFChars(env, value, NULL);
+			file = fopen(param, "wb");
+			(*env)->ReleaseStringUTFChars(env, value, param);
+			if(NULL == file) {
+				LOGE("cannot open: %s", strerror(errno));
+				return JNI_FALSE;
+			}
+			code = curl_easy_setopt(curl, option, file);
+			if (CURLE_OK == code) {
+				return JNI_TRUE;
+			}
+			break;
+	}
+	return JNI_FALSE;
+}
+
+static struct curl_slist *slists = NULL;
+static void append(struct curl_slist *slist)
+{
+	struct curl_slist *head;
+	if (NULL == slists) {
+		slists = slist;
+	} else {
+		head = slists;
+		while (head->next) {
+			head = head->next;
+		}
+		head->next = slist;
+	}
+}
+
+static jboolean curl_setopt_array(JNIEnv *env, jobject clazz, jint handle, jint option, jobjectArray value)
+{
+	int i, count;
+	struct curl_slist *slist = NULL;
+	CURL *curl = (CURL *)handle;
+	if (NULL == curl) {
+		return JNI_FALSE;
+	}
+
+	switch (option) {
+		case CURLOPT_HTTPHEADER:
+		case CURLOPT_HTTP200ALIASES:
+		case CURLOPT_POSTQUOTE:
+		case CURLOPT_PREQUOTE:
+		case CURLOPT_QUOTE:
+		case CURLOPT_RESOLVE:
+		case CURLOPT_TELNETOPTIONS:
+		case CURLOPT_MAIL_RCPT:
+			break;
+		default:
+			return JNI_FALSE;
+	}
+
+	count = (*env)->GetArrayLength(env, value);
+
+	for (i = 0; i < count; i++) {
+		jstring string = (jstring)(*env)->GetObjectArrayElement(env, value, i);
+		char *param = (char *)(*env)->GetStringUTFChars(env, string, NULL);
+		slist = curl_slist_append(slist, param);
+		(*env)->ReleaseStringUTFChars(env, value, param);
+		if (NULL == slist) {
+			return JNI_FALSE;
+		}
+	}
+
+	code = curl_easy_setopt(curl, option, slist);
+	if (CURLE_OK != code) {
+		curl_slist_free_all(slist);
+		return JNI_FALSE;
+	}
+
+	append(slist);
+
+	return JNI_TRUE;
+}
+
+static jboolean curl_setopt_bytes(JNIEnv *env, jobject clazz, jint handle, jint option, jbyteArray value)
+{
+	jbyte *data;
+	CURL *curl = (CURL *)handle;
+	if (NULL == curl) {
+		return JNI_FALSE;
+	}
+
+	switch (option) {
+		case CURLOPT_POSTFIELDS:
+		case CURLOPT_COOKIEFILE:
+		case CURLOPT_WRITEHEADER:
+		case CURLOPT_PROGRESSDATA:
+		case CURLOPT_DEBUGDATA:
+		case CURLOPT_SEEKDATA:
+		case CURLOPT_IOCTLDATA:
+		case CURLOPT_SSL_CTX_DATA:
+		case CURLOPT_PRIVATE:
+		case CURLOPT_SOCKOPTDATA:
+		case CURLOPT_OPENSOCKETDATA:
+		case CURLOPT_CLOSESOCKETDATA:
+		case CURLOPT_SSH_KEYDATA:
+		case CURLOPT_INTERLEAVEDATA:
+		case CURLOPT_CHUNK_DATA:
+		case CURLOPT_FNMATCH_DATA:
+		/* void */
+		case CURLOPT_FILE:
+		case CURLOPT_INFILE:
+		case CURLOPT_STDERR:
+			break;
+		default:
+			return JNI_FALSE;
+	}
+
+	data = (*env)->GetByteArrayElements(env, value, NULL);
+	if (data == NULL) {
+		LOGE("cannot get byte array elements");
+		return JNI_FALSE;
+	}
+
+	code = curl_easy_setopt(curl, option, data);
+
+	if (CURLE_OK != code) {
+		(*env)->ReleaseByteArrayElements(env, value, data, 0);
+		return JNI_FALSE;
+	}
+
+	LOGD("i dont find anyway to release the elements");
+	// or memcpy, but cannot free neither...
+	return JNI_TRUE;
+}
+
+typedef struct {
+	JNIEnv *env;
+	jobject object;
+	jmethodID method;
+} callback;
+
+static callback *readfunction;
+static callback *writefunction;
+static callback *headerfunction;
+static callback *debugfunction;
+static callback *progressfunction;
+
+static size_t curl_read(char *ptr, size_t size, size_t nmemb, void *userdata)
+{
+	char *data;
+	jint result;
+	jbyteArray array;
+	jint length = size * nmemb;
+	JNIEnv *env = writefunction->env;
+	jobject object = writefunction->object;
+	jmethodID method = writefunction->method;
+
+	if (length == 0) {
+		LOGE("curl_header length is 0");
+		return 0;
+	}
+
+	array = (*env)->NewByteArray(env, length);
+	if (!array) {
+		LOGE("curl_read could not create new byte[]");
+		return 0;
+	}
+	result = (*env)->CallIntMethod(env, object, method, array);
+	data = (*env)->GetByteArrayElements(env, array, NULL);
+	memcpy(ptr, data, result);
+	(*env)->ReleaseByteArrayElements(env, array, data, 0);
+	(*env)->DeleteLocalRef(env, array);
+
+	return result;
+}
+
+static size_t curl_write(char *ptr, size_t size, size_t nmemb, void *userdata)
+{
+	jint result;
+	jbyteArray array;
+	jint length = size * nmemb;
+	JNIEnv *env = writefunction->env;
+	jobject object = writefunction->object;
+	jmethodID method = writefunction->method;
+
+	if (length == 0) {
+		LOGE("curl_header length is 0");
+		return 0;
+	}
+
+	array = (*env)->NewByteArray(env, length);
+	if (!array) {
+		LOGE("curl_write could not create new byte[]");
+		return 0;
+	}
+    (*env)->SetByteArrayRegion(env, array, 0, length, ptr);
+	result = (*env)->CallIntMethod(env, object, method, array);
+	(*env)->DeleteLocalRef(env, array);
+
+	return result;
+}
+
+static size_t curl_header(char *ptr, size_t size, size_t nmemb, void *userdata)
+{
+	jint result;
+	jbyteArray array;
+	jint length = size * nmemb;
+	JNIEnv *env = headerfunction->env;
+	jobject object = headerfunction->object;
+	jmethodID method = headerfunction->method;
+
+	if (length == 0) {
+		LOGE("curl_header length is 0");
+		return 0;
+	}
+
+	array = (*env)->NewByteArray(env, length);
+	if (!array) {
+		LOGE("curl_header could not create new byte[]");
+		return 0;
+	}
+    (*env)->SetByteArrayRegion(env, array, 0, length, ptr);
+	result = (*env)->CallIntMethod(env, object, method, array);
+	(*env)->DeleteLocalRef(env, array);
+
+	return result;
+}
+
+static int curl_debug(CURL *handle, curl_infotype type, char *data, size_t size, void *userptr)
+{
+	jint result;
+	jbyteArray array;
+	JNIEnv *env = debugfunction->env;
+	jobject object = debugfunction->object;
+	jmethodID method = debugfunction->method;
+
+	if (size == 0) {
+		LOGD("curl_debug size is 0");
+		return 0;
+	}
+
+	array = (*env)->NewByteArray(env, size);
+	if (!array) {
+		LOGE("curl_debug could not create new byte[]");
+		return 0;
+	}
+    (*env)->SetByteArrayRegion(env, array, 0, size, data);
+	result = (*env)->CallIntMethod(env, object, method, type, array);
+	(*env)->DeleteLocalRef(env, array);
+
+	return result;
+}
+
+static int curl_progress(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow)
+{
+	jint result;
+	JNIEnv *env = progressfunction->env;
+	jobject object = progressfunction->object;
+	jmethodID method = progressfunction->method;
+
+	result = (*env)->CallIntMethod(env, object, method, dltotal, dlnow, ultotal, ulnow);
+
+	return result;
+}
+
+static jboolean curl_setopt_callback(JNIEnv *env, jobject clazz, jint handle, jint option, jobject value)
+{
+	callback **cb;
+	const char *sig;
+	jclass class;
+	jmethodID method;
+	CURL *curl = (CURL *)handle;
+	if (NULL == curl) {
+		return JNI_FALSE;
+	}
+
+	switch (option) {
+		case CURLOPT_READFUNCTION:
+			sig = "([B)I";
+			cb = &readfunction;
+			break;
+		case CURLOPT_WRITEFUNCTION:
+			sig = "([B)I";
+			cb = &writefunction;
+			break;
+		case CURLOPT_HEADERFUNCTION:
+			sig = "([B)I";
+			cb = &headerfunction;
+			break;
+		case CURLOPT_DEBUGFUNCTION:
+			sig = "(I[B)I";
+			cb = &debugfunction;
+			break;
+		case CURLOPT_PROGRESSFUNCTION:
+			sig = "(DDDD)I";
+			cb = &progressfunction;
+			break;
+		default:
+			return JNI_FALSE;
+	}
+
+	class = (*env)->GetObjectClass(env, value);
+	method = (*env)->GetMethodID(env, class, "callback", sig);
+	if (method == 0) {
+		return JNI_FALSE;
+	}
+
+	*cb = malloc(sizeof(**cb));
+	if (!(*cb)) {
+		return JNI_FALSE;
+	}
+
+	(*cb)->env = env;
+	(*cb)->object = value;
+	(*cb)->method = method;
+
+	switch (option) {
+		case CURLOPT_READFUNCTION:
+			LOGD("set readfunction");
+			curl_easy_setopt(curl, option, curl_read);
+			break;
+		case CURLOPT_WRITEFUNCTION:
+			LOGD("set writefunction");
+			curl_easy_setopt(curl, option, curl_write);
+			break;
+		case CURLOPT_HEADERFUNCTION:
+			LOGD("set headerfunction");
+			curl_easy_setopt(curl, option, curl_header);
+			break;
+		case CURLOPT_DEBUGFUNCTION:
+			LOGD("set debugfunction");
+			curl_easy_setopt(curl, option, curl_debug);
+			break;
+		case CURLOPT_PROGRESSFUNCTION:
+			LOGD("set progressfunction");
+			curl_easy_setopt(curl, option, curl_progress);
+			break;
+	}
+
+	return JNI_TRUE;
+}
+
+static jboolean curl_perform(JNIEnv *env, jobject clazz, jint handle)
+{
+	CURL *curl = (CURL *)handle;
+	if (NULL == curl) {
+		return JNI_FALSE;
+	}
+
+	code = curl_easy_perform(curl);
+
+	if (NULL != slists) {
+		curl_slist_free_all(slists);
+		slists = NULL;
+	}
+
+	fflush(NULL);
+	if (CURLE_OK == code) {
+		return JNI_TRUE;
+	}
+
+	return JNI_FALSE;
+}
+
+static jlong curl_getinfo_long(JNIEnv *env, jobject clazz, jint handle, jint info)
+{
+	long longp;
+	CURL *curl = (CURL *)handle;
+	if (NULL == curl) {
+		return -1;
+	}
+
+	switch (info) {
+		case CURLINFO_RESPONSE_CODE:
+		case CURLINFO_HEADER_SIZE:
+		case CURLINFO_REQUEST_SIZE:
+		case CURLINFO_SSL_VERIFYRESULT:
+		case CURLINFO_FILETIME:
+		case CURLINFO_REDIRECT_COUNT:
+		case CURLINFO_HTTP_CONNECTCODE:
+		case CURLINFO_HTTPAUTH_AVAIL:
+		case CURLINFO_PROXYAUTH_AVAIL:
+		case CURLINFO_OS_ERRNO:
+		case CURLINFO_NUM_CONNECTS:
+		case CURLINFO_LASTSOCKET:
+		case CURLINFO_CONDITION_UNMET:
+		case CURLINFO_RTSP_CLIENT_CSEQ:
+		case CURLINFO_RTSP_SERVER_CSEQ:
+		case CURLINFO_RTSP_CSEQ_RECV:
+		case CURLINFO_PRIMARY_PORT:
+		case CURLINFO_LOCAL_PORT:
+			code = curl_easy_getinfo(curl, info, &longp);
+			if (CURLE_OK == code) {
+				return longp;
+			}
+			break;
+	}
+
+	return -1;
+}
+
+static jdouble curl_getinfo_double(JNIEnv *env, jobject clazz, jint handle, jint info)
+{
+	double doublep;
+	CURL *curl = (CURL *)handle;
+	if (NULL == curl) {
+		return -1;
+	}
+
+	switch (info) {
+		case CURLINFO_TOTAL_TIME:
+		case CURLINFO_NAMELOOKUP_TIME:
+		case CURLINFO_CONNECT_TIME:
+		case CURLINFO_PRETRANSFER_TIME:
+		case CURLINFO_SIZE_UPLOAD:
+		case CURLINFO_SIZE_DOWNLOAD:
+		case CURLINFO_SPEED_DOWNLOAD:
+		case CURLINFO_SPEED_UPLOAD:
+		case CURLINFO_CONTENT_LENGTH_DOWNLOAD:
+		case CURLINFO_CONTENT_LENGTH_UPLOAD:
+		case CURLINFO_STARTTRANSFER_TIME:
+		case CURLINFO_REDIRECT_TIME:
+		case CURLINFO_APPCONNECT_TIME:
+			code = curl_easy_getinfo(curl, info, &doublep);
+			if (CURLE_OK == code) {
+				return doublep;
+			}
+			break;
+	}
+
+	return -1;
+}
+
+static jstring curl_getinfo(JNIEnv *env, jobject clazz, jint handle, jint info)
+{
+	long longp;
+	double doublep;
+	char value[64];
+	char *charp;
+	CURL *curl = (CURL *)handle;
+
+	if (NULL == curl) {
+		return (*env)->NewStringUTF(env, "");
+	}
+
+	switch (info) {
+		case CURLINFO_RESPONSE_CODE:
+		case CURLINFO_HEADER_SIZE:
+		case CURLINFO_REQUEST_SIZE:
+		case CURLINFO_SSL_VERIFYRESULT:
+		case CURLINFO_FILETIME:
+		case CURLINFO_REDIRECT_COUNT:
+		case CURLINFO_HTTP_CONNECTCODE:
+		case CURLINFO_HTTPAUTH_AVAIL:
+		case CURLINFO_PROXYAUTH_AVAIL:
+		case CURLINFO_OS_ERRNO:
+		case CURLINFO_NUM_CONNECTS:
+		case CURLINFO_LASTSOCKET:
+		case CURLINFO_CONDITION_UNMET:
+		case CURLINFO_RTSP_CLIENT_CSEQ:
+		case CURLINFO_RTSP_SERVER_CSEQ:
+		case CURLINFO_RTSP_CSEQ_RECV:
+		case CURLINFO_PRIMARY_PORT:
+		case CURLINFO_LOCAL_PORT:
+			code = curl_easy_getinfo(curl, info, &longp);
+			if (CURLE_OK == code) {
+				sprintf(value, "%ld", longp);
+				return (*env)->NewStringUTF(env, value);
+			}
+			break;
+		case CURLINFO_TOTAL_TIME:
+		case CURLINFO_NAMELOOKUP_TIME:
+		case CURLINFO_CONNECT_TIME:
+		case CURLINFO_PRETRANSFER_TIME:
+		case CURLINFO_SIZE_UPLOAD:
+		case CURLINFO_SIZE_DOWNLOAD:
+		case CURLINFO_SPEED_DOWNLOAD:
+		case CURLINFO_SPEED_UPLOAD:
+		case CURLINFO_CONTENT_LENGTH_DOWNLOAD:
+		case CURLINFO_CONTENT_LENGTH_UPLOAD:
+		case CURLINFO_STARTTRANSFER_TIME:
+		case CURLINFO_REDIRECT_TIME:
+		case CURLINFO_APPCONNECT_TIME:
+			code = curl_easy_getinfo(curl, info, &doublep);
+			if (CURLE_OK == code) {
+				sprintf(value, "%.3f", doublep);
+				return (*env)->NewStringUTF(env, value);
+			}
+			break;
+		case CURLINFO_EFFECTIVE_URL:
+		case CURLINFO_CONTENT_TYPE:
+		case CURLINFO_PRIVATE:
+		case CURLINFO_FTP_ENTRY_PATH:
+		case CURLINFO_REDIRECT_URL:
+		case CURLINFO_PRIMARY_IP:
+		case CURLINFO_RTSP_SESSION_ID:
+		case CURLINFO_LOCAL_IP:
+			code = curl_easy_getinfo(curl, info, &charp);
+			if (CURLE_OK == code) {
+				return (*env)->NewStringUTF(env, charp);
+			}
+			break;
+	}
+
+	return (*env)->NewStringUTF(env, "");
+}
+
+static jint curl_errno(JNIEnv *env, jobject clazz)
+{
+	return code;
+}
+
+static jstring curl_error(JNIEnv *env, jobject clazz)
+{
+	return (*env)->NewStringUTF(env, curl_easy_strerror(code));
+}
+
+#define FREE(x) do { free(x); x = NULL; } while (0)
+static void curl_cleanup(JNIEnv *env, jobject clazz, jint handle)
+{
+	CURL *curl = (CURL *)handle;
+	if (NULL != curl) {
+		curl_easy_cleanup(curl);
+	}
+	FREE(readfunction);
+	FREE(writefunction);
+	FREE(headerfunction);
+	FREE(debugfunction);
+	FREE(progressfunction);
+}
+
+static JNINativeMethod methods[] = {
+	/* name, signature, funcPtr */
+	{"curl_init", "()I", (void*)curl_init},
+	{"curl_setopt", "(IIJ)Z", (void*)curl_setopt_long},
+	{"curl_setopt", "(IILjava/lang/String;)Z", (void*)curl_setopt_string},
+	{"curl_setopt", "(II[Ljava/lang/String;)Z", (void*)curl_setopt_array},
+	{"curl_setopt", "(II[B)Z", (void*)curl_setopt_bytes},
+	{"curl_setopt", "(IILme/piebridge/curl/Read;)Z", (void*)curl_setopt_callback},
+	{"curl_setopt", "(IILme/piebridge/curl/Write;)Z", (void*)curl_setopt_callback},
+	{"curl_setopt", "(IILme/piebridge/curl/Debug;)Z", (void*)curl_setopt_callback},
+	{"curl_setopt", "(IILme/piebridge/curl/Progress;)Z", (void*)curl_setopt_callback},
+	{"curl_perform", "(I)Z", (void*)curl_perform},
+	{"curl_getinfo", "(II)Ljava/lang/String;", (void*)curl_getinfo},
+	{"curl_getinfo_long", "(II)J", (void*)curl_getinfo_long},
+	{"curl_getinfo_double", "(II)D", (void*)curl_getinfo_double},
+	{"curl_cleanup", "(I)V", (void*)curl_cleanup},
+	{"curl_errno", "()I", (void*)curl_errno},
+	{"curl_error", "()Ljava/lang/String;", (void*)curl_error},
+};
+
+jint JNI_OnLoad(JavaVM *vm, void *reserved)
+{
+	JNIEnv *env;
+	jclass clazz;
+
+	if ((*vm)->GetEnv(vm, (void **)&env, JNI_VERSION_1_6) != JNI_OK) {
+		return -1;
+	}
+
+	clazz = (*env)->FindClass(env, CLASSNAME);
+	if (clazz == NULL) {
+		LOGE("Can't find %s", CLASSNAME);
+		return -1;
+	}
+
+	if ((*env)->RegisterNatives(env, clazz, methods, ARRAY_SIZE(methods)) < 0) {
+		return -1;
+	}
+
+	return JNI_VERSION_1_6;
+}

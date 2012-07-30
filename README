@@ -1,12 +1,19 @@
 curl for android demo.
 
-demo将下载http://piebridge.me/i.html 及 https://piebridge.me/i.html 。
-生成libhttp.so方法：
-1. 下载curl源码放入jni/curl，可以为链接
-2. 编辑jni/android.sh，修改ANDROID_ROOT, ANDROID_NDK, TOOLCHAIN_VER, PLATFORM_VER
-   ANDROID_ROOT: android源码目录，比如可能包含openssl, zlib
-   ANDROID_NDK: android-ndk目录，使用ndk提供的api-level
-   TOOLCHAIN_VER: gcc版本
+how to generate libcurl:
+1. edit jni/configure.sh, change the default settings:
+   SOURCE => curl and c-ares source code directory
+   ANDROID_ROOT: android source code directory
+   ANDROID_NDK: android-ndk directory
+   TOOLCHAIN_VER: gcc version
    PLATFORM_VER: api-level
-3. 进入jni/curl目录，运行android.sh，生成必要文件
-4. 运行ndk-build，生成libhttp.so
+2. run jni/configure.sh
+   if there are may error, check and fix...
+3. run ndk-build, generate libcurl.so
+
+libcurl.so size:
+   (default is https with ares)
+   https: ~169K (including http, https)
+    ares: ~28K (adding to https, with ares support)
+    ipv6: ~0K (no extra size)
+   +full: ~278K (all protocols, with ares)
