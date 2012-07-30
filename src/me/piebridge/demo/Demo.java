@@ -33,13 +33,17 @@ public class Demo extends Activity
         TextView textView = new TextView(this);
 
         Data data = new Data();
-        data.getURL("https://m.google.com");
-        textView.setText(data.data);
+        data.getURL("https://piebridge.me/demo.html");
+        textView.setText(data.getData());
         setContentView(textView);
     }
 
     public class Data extends Curl {
-        public String data = "";
+        private String data = "";
+        public String getData()
+        {
+            return data;
+        }
         public String getURL(String url)
         {
             int curl = curl_init();
@@ -49,18 +53,20 @@ public class Demo extends Activity
             }
 
             curl_setopt(curl, CURLOPT_URL, url);
-            curl_setopt(curl, CURLOPT_HEADER, 1);
             curl_setopt(curl, CURLOPT_VERBOSE, 1);
+
+            // CURLOPT_WRITEFUNCTION will have header too if CURLOPT_HEADER is true
+            // curl_setopt(curl, CURLOPT_HEADER, 1);
 
             // or set CURLOPT_WRITEHEADER to file path
             curl_setopt(curl, CURLOPT_HEADERFUNCTION, new Write() {
                 public int callback(byte[] ptr) {
                     if (ptr == null) {
-                        Log.d("CURL-J-HEADERFUNCTION", "write null");
+                        Log.d("CURL-J-HEADER", "write null");
                         return -1;
                     }
                     data += new String(ptr);
-                    Log.d("CURL-J-HEADERFUNCTION", new String(ptr));
+                    Log.d("CURL-J-HEADER", new String(ptr));
                     return ptr.length;
                 }
             });
@@ -69,9 +75,11 @@ public class Demo extends Activity
             curl_setopt(curl, CURLOPT_WRITEFUNCTION, new Write() {
                 public int callback(byte[] ptr) {
                     if (ptr == null) {
-                        Log.d("CURL-J-WRITEFUNCTION", "write null");
+                        Log.d("CURL-J-WRITE", "write null");
                         return -1;
                     }
+                    Log.d("CURL-J-WRITE", new String(ptr));
+                    data += new String(ptr);
                     return ptr.length;
                 }
             });
@@ -80,11 +88,11 @@ public class Demo extends Activity
             curl_setopt(curl, CURLOPT_DEBUGFUNCTION, new Debug() {
                 public int callback(int type, byte[] ptr) {
                     if (ptr == null) {
-                        Log.d("CURL-J-DEBUGFUNCTION", CURLINFO[type] + ": write null");
+                        Log.d("CURL-J-DEBUG", CURLINFO[type] + ": write null");
                         return 0;
                     }
                     if (type == CURLINFO_TEXT) {
-                        Log.d("CURL-J-DEBUGFUNCTION", CURLINFO[type] + ": " + new String(ptr));
+                        Log.d("CURL-J-DEBUG", CURLINFO[type] + ": " + new String(ptr));
                     }
                     return 0;
                 }
@@ -112,6 +120,7 @@ public class Demo extends Activity
             if (!curl_perform(curl)) {
                 data = curl_error();
             } else {
+                data += "=====getinfo=====\n";
                 data += "total_time: " + curl_getinfo(curl, CURLINFO_TOTAL_TIME) + "\n";
                 data += "namelookup_time: " + curl_getinfo(curl, CURLINFO_NAMELOOKUP_TIME) + "\n";
                 data += "connect_time: " + curl_getinfo(curl, CURLINFO_CONNECT_TIME) + "\n";
