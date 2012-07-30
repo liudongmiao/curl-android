@@ -1,7 +1,7 @@
 /* vim: set sw=4 ts=4:
  * Author: Liu DongMiao <liudongmiao@gmail.com>
  * Created  : Thu 26 Jul 2012 02:13:55 PM CST
- * Modified : Mon 30 Jul 2012 11:19:05 AM CST
+ * Modified : Mon 30 Jul 2012 12:05:04 PM CST
  *
  * This program is free software. It comes without any warranty, to
  * the extent permitted by applicable law. You can redistribute it
@@ -43,6 +43,7 @@ static jboolean curl_setopt_long(JNIEnv *env, jobject clazz, jint handle, jint o
 	}
 
 	switch (option) {
+		case CURLOPT_SSLENGINE_DEFAULT:
 		case CURLOPT_DNS_CACHE_TIMEOUT:
 		case CURLOPT_DNS_USE_GLOBAL_CACHE:
 		case CURLOPT_MAXCONNECTS:
@@ -53,6 +54,7 @@ static jboolean curl_setopt_long(JNIEnv *env, jobject clazz, jint handle, jint o
 		case CURLOPT_NOPROGRESS:
 		case CURLOPT_NOBODY:
 		case CURLOPT_FAILONERROR:
+		case CURLOPT_UPLOAD:
 		case CURLOPT_PUT:
 		case CURLOPT_FILETIME:
 		case CURLOPT_FTP_CREATE_MISSING_DIRS:
