@@ -1,20 +1,37 @@
 /* vim: set sw=4 ts=4:
  * Author: Liu DongMiao <liudongmiao@gmail.com>
  * Created  : Thu 26 Jul 2012 02:13:55 PM CST
- * Modified : Mon 30 Jul 2012 12:05:04 PM CST
+ * Modified : Mon 30 Jul 2012 01:16:55 PM CST
  *
- * This program is free software. It comes without any warranty, to
- * the extent permitted by applicable law. You can redistribute it
- * and/or modify it under the terms of the Do What The Fuck You Want
- * To Public License, Version 2, as published by Sam Hocevar. See
- * http://sam.zoy.org/wtfpl/COPYING for more details.
+ * CopyRight (c) 2012, Liu DongMiao, <liudongmiao@gmail.com>.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <errno.h>
 #include "curl/curl.h"
 
@@ -418,7 +435,7 @@ static size_t curl_write(char *ptr, size_t size, size_t nmemb, void *userdata)
 		LOGE("curl_write could not create new byte[]");
 		return 0;
 	}
-    (*env)->SetByteArrayRegion(env, array, 0, length, ptr);
+	(*env)->SetByteArrayRegion(env, array, 0, length, ptr);
 	result = (*env)->CallIntMethod(env, object, method, array);
 	(*env)->DeleteLocalRef(env, array);
 
@@ -444,7 +461,7 @@ static size_t curl_header(char *ptr, size_t size, size_t nmemb, void *userdata)
 		LOGE("curl_header could not create new byte[]");
 		return 0;
 	}
-    (*env)->SetByteArrayRegion(env, array, 0, length, ptr);
+	(*env)->SetByteArrayRegion(env, array, 0, length, ptr);
 	result = (*env)->CallIntMethod(env, object, method, array);
 	(*env)->DeleteLocalRef(env, array);
 
@@ -469,7 +486,7 @@ static int curl_debug(CURL *handle, curl_infotype type, char *data, size_t size,
 		LOGE("curl_debug could not create new byte[]");
 		return 0;
 	}
-    (*env)->SetByteArrayRegion(env, array, 0, size, data);
+	(*env)->SetByteArrayRegion(env, array, 0, size, data);
 	result = (*env)->CallIntMethod(env, object, method, type, array);
 	(*env)->DeleteLocalRef(env, array);
 
