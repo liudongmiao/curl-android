@@ -33,15 +33,15 @@ public class Demo extends Activity
         TextView textView = new TextView(this);
 
         Data data = new Data();
-        String content = data.getURL("https://m.google.com");
-        textView.setText(content);
+        data.getURL("https://m.google.com");
+        textView.setText(data.data);
         setContentView(textView);
     }
 
     public class Data extends Curl {
+        public String data = "";
         public String getURL(String url)
         {
-            String data = "";
             int curl = curl_init();
 
             if (0 == curl) {
@@ -59,6 +59,7 @@ public class Demo extends Activity
                         Log.d("CURL-J-HEADERFUNCTION", "write null");
                         return -1;
                     }
+                    data += new String(ptr);
                     Log.d("CURL-J-HEADERFUNCTION", new String(ptr));
                     return ptr.length;
                 }
