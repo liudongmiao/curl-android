@@ -1,7 +1,7 @@
 /* vim: set sw=4 ts=4:
  * Author: Liu DongMiao <liudongmiao@gmail.com>
  * Created  : Thu 26 Jul 2012 02:13:55 PM CST
- * Modified : Mon 30 Jul 2012 01:16:55 PM CST
+ * Modified : Mon 30 Jul 2012 08:05:29 PM CST
  *
  * CopyRight (c) 2012, Liu DongMiao, <liudongmiao@gmail.com>.
  * All rights reserved.
@@ -389,7 +389,7 @@ static callback *progressfunction;
 
 static size_t curl_read(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
-	char *data;
+	jbyte *data;
 	jint result;
 	jbyteArray array;
 	jint length = size * nmemb;
@@ -435,7 +435,7 @@ static size_t curl_write(char *ptr, size_t size, size_t nmemb, void *userdata)
 		LOGE("curl_write could not create new byte[]");
 		return 0;
 	}
-	(*env)->SetByteArrayRegion(env, array, 0, length, ptr);
+	(*env)->SetByteArrayRegion(env, array, 0, length, (jbyte *)ptr);
 	result = (*env)->CallIntMethod(env, object, method, array);
 	(*env)->DeleteLocalRef(env, array);
 
@@ -461,7 +461,7 @@ static size_t curl_header(char *ptr, size_t size, size_t nmemb, void *userdata)
 		LOGE("curl_header could not create new byte[]");
 		return 0;
 	}
-	(*env)->SetByteArrayRegion(env, array, 0, length, ptr);
+	(*env)->SetByteArrayRegion(env, array, 0, length, (jbyte *)ptr);
 	result = (*env)->CallIntMethod(env, object, method, array);
 	(*env)->DeleteLocalRef(env, array);
 
@@ -486,7 +486,7 @@ static int curl_debug(CURL *handle, curl_infotype type, char *data, size_t size,
 		LOGE("curl_debug could not create new byte[]");
 		return 0;
 	}
-	(*env)->SetByteArrayRegion(env, array, 0, size, data);
+	(*env)->SetByteArrayRegion(env, array, 0, size, (jbyte *)data);
 	result = (*env)->CallIntMethod(env, object, method, type, array);
 	(*env)->DeleteLocalRef(env, array);
 
@@ -673,6 +673,125 @@ static jdouble curl_getinfo_double(JNIEnv *env, jobject clazz, jint handle, jint
 	return -1;
 }
 
+static jobjectArray dump_slist(JNIEnv *env, struct curl_slist *slist)
+{
+	jclass class;
+	jsize index, len = 0;
+	jobjectArray result;
+	struct curl_slist *head;
+
+	if (slist == NULL) {
+		return NULL;
+	}
+
+	head = slist;
+	while (head) {
+		len++;
+		head = head->next;
+	}
+
+	class = (*env)->FindClass(env, "java/lang/String");
+	if (NULL == class) {
+		LOGE("no such class: java/lang/String");
+		return NULL;
+	}
+
+	result = (*env)->NewObjectArray(env, len, class, NULL);
+	if (result == NULL) {
+		LOGE("cannot create String Array");
+		return NULL;
+	}
+
+	for (index = 0, head = slist; index < len; index++, head = head->next) {
+		jstring string = (*env)->NewStringUTF(env, head->data);
+		if (string == NULL) {
+			LOGE("cannot create String for %d in slist: %s", index, head->data);
+			(*env)->DeleteLocalRef(env, result);
+			return NULL;
+		}
+		(*env)->SetObjectArrayElement(env, result, index, string);
+		(*env)->DeleteLocalRef(env, string);
+	}
+
+	return result;
+}
+
+static jobjectArray dump_certinfo(JNIEnv *env, struct curl_certinfo *certinfo)
+{
+	jsize index;
+	jclass class;
+	jobjectArray result;
+
+	if (certinfo->num_of_certs == 0) {
+		return NULL;
+	}
+
+	// why there is no [java/lang/String?
+	class = (*env)->FindClass(env, "java/lang/Object");
+	if (NULL == class) {
+		LOGE("no such class: java/lang/Object");
+		return NULL;
+	}
+
+	result = (*env)->NewObjectArray(env, certinfo->num_of_certs, class, NULL);
+	if (result == NULL) {
+		LOGE("cannot create Object[]");
+		return NULL;
+	}
+
+	for (index = 0; index < certinfo->num_of_certs; index++) {
+		jobjectArray object = dump_slist(env, certinfo->certinfo[index]);
+		if (object == NULL) {
+			LOGE("cannot create String[] for %d in certinfo %p", index, certinfo->certinfo[index]);
+			(*env)->DeleteLocalRef(env, result);
+			return NULL;
+		}
+		(*env)->SetObjectArrayElement(env, result, index, object);
+		(*env)->DeleteLocalRef(env, result);
+	}
+
+	return result;
+}
+
+static jobjectArray curl_getinfo_slist(JNIEnv *env, jobject clazz, jint handle, jint info)
+{
+	jobjectArray result = NULL;
+	union {
+		struct curl_certinfo *to_certinfo;
+		struct curl_slist *to_slist;
+	} ptr;
+
+	CURL *curl = (CURL *)handle;
+	if (NULL == curl) {
+		return NULL;
+	}
+
+	switch (info) {
+		case CURLINFO_COOKIELIST:
+		case CURLINFO_SSL_ENGINES:
+		case CURLINFO_CERTINFO:
+			code = curl_easy_getinfo(curl, info, &(ptr.to_slist));
+			if (CURLE_OK == code) {
+				break;
+			}
+		default:
+			return NULL;
+	}
+
+	switch (info) {
+		case CURLINFO_COOKIELIST:
+		case CURLINFO_SSL_ENGINES:
+			result = dump_slist(env, ptr.to_slist);
+			curl_slist_free_all(ptr.to_slist);
+			break;
+		case CURLINFO_CERTINFO:
+			result = dump_certinfo(env, ptr.to_certinfo);
+			break;
+	}
+
+	return result;
+}
+
 static jstring curl_getinfo(JNIEnv *env, jobject clazz, jint handle, jint info)
 {
 	long longp;
@@ -786,6 +905,8 @@ static JNINativeMethod methods[] = {
 	{"curl_getinfo", "(II)Ljava/lang/String;", (void*)curl_getinfo},
 	{"curl_getinfo_long", "(II)J", (void*)curl_getinfo_long},
 	{"curl_getinfo_double", "(II)D", (void*)curl_getinfo_double},
+	{"curl_getinfo_list", "(II)[Ljava/lang/String;", (void*)curl_getinfo_slist},
+	{"curl_getinfo_certinfo", "(II)[[Ljava/lang/String;", (void*)curl_getinfo_slist},
 	{"curl_cleanup", "(I)V", (void*)curl_cleanup},
 	{"curl_errno", "()I", (void*)curl_errno},
 	{"curl_error", "()Ljava/lang/String;", (void*)curl_error},

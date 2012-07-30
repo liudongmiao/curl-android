@@ -286,6 +286,8 @@ public class Curl
     public static native boolean curl_perform(int curl);
     public static native long curl_getinfo_long(int curl, int info);
     public static native double curl_getinfo_double(int curl, int info);
+    public static native String[] curl_getinfo_list(int curl, int info);
+    public static native String[][] curl_getinfo_certinfo(int curl, int info);
     public static native String curl_getinfo(int curl, int info);
     public static native void curl_cleanup(int curl);
 

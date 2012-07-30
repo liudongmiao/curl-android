@@ -27,6 +27,6 @@ LOCAL_MODULE := curl
 LOCAL_SRC_FILES := curl.c
 LOCAL_STATIC_LIBRARIES := static-curl
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/curl/include $(LOCAL_PATH)/curl/lib
-LOCAL_CFLAGS += $(CFLAGS)
+LOCAL_CFLAGS += -Wall
 LOCAL_LDFLAGS += -llog -lssl -lcrypto -lz -L$(ANDROID_ROOT)/out/target/product/generic/system/lib
 include $(BUILD_SHARED_LIBRARY)
