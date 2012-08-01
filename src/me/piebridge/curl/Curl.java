@@ -275,23 +275,86 @@ public class Curl
     public static native int curl_init();
     public static native int curl_errno();
     public static native String curl_error();
+    // curl_easy_setopt with long, unsigned long, curl_off_t
     public static native boolean curl_setopt(int curl, int option, long value);
+    // curl_easy_setopt with char *
     public static native boolean curl_setopt(int curl, int option, String value);
+    // curl_easy_setopt with curl_slit
     public static native boolean curl_setopt(int curl, int option, String[] value);
+    // curl_easy_setopt with void *
     public static native boolean curl_setopt(int curl, int option, byte[] value);
-    public static native boolean curl_setopt(int curl, int option, Read value);
-    public static native boolean curl_setopt(int curl, int option, Write value);
-    public static native boolean curl_setopt(int curl, int option, Debug value);
-    public static native boolean curl_setopt(int curl, int option, Progress value);
+    // curl_easy_setopt with callback, Object is a class implements callback
+    public static native boolean curl_setopt(int curl, int option, Object value);
     public static native boolean curl_perform(int curl);
+    // curl_easy_getinfo with long
     public static native long curl_getinfo_long(int curl, int info);
+    // curl_easy_getinfo with double
     public static native double curl_getinfo_double(int curl, int info);
+    // curl_easy_getinfo with curl_slist
     public static native String[] curl_getinfo_list(int curl, int info);
+    // curl_easy_getinfo with certinfo, certinfo is set of curl_slist
     public static native String[][] curl_getinfo_certinfo(int curl, int info);
+    // curl_easy_getinfo with string, including long and double
     public static native String curl_getinfo(int curl, int info);
     public static native void curl_cleanup(int curl);
+
+    /*
+     * CURLOPT_WRITEFUNCTION
+     * CURLOPT_HEADERFUNCTION
+     * size_t function(void *ptr, size_t size, size_t nmemb, void *userdata);
+     */
+    public interface Write
+    {
+        public int callback(byte[] ptr);
+    }
+
+    /*
+     * CURLOPT_READFUNCTION
+     * size_t function(void *ptr, size_t size, size_t nmemb, void *userdata);
+     */
+    public interface Read
+    {
+        public int callback(byte[] ptr);
+    }
+
+    /*
+     * CURLOPT_DEBUGFUNCTION
+     * int curl_debug_callback(CURL *, curl_infotype, char *, size_t, void *);
+     */
+    public interface Debug
+    {
+        public int callback(int type, byte[] ptr);
+
+        public final int CURLINFO_TEXT = 0;
+        public final int CURLINFO_HEADER_IN = 1;
+        public final int CURLINFO_HEADER_OUT = 2;
+        public final int CURLINFO_DATA_IN = 3;
+        public final int CURLINFO_DATA_OUT = 4;
+        public final int CURLINFO_SSL_DATA_IN = 5;
+        public final int CURLINFO_SSL_DATA_OUT = 6;
+        public final String[] CURLINFO = {
+            "TEXT",
+            "HEADER_IN",
+            "HEADER_OUT",
+            "DATA_IN",
+            "DATA_OUT",
+            "SSL_DATA_IN",
+            "SSL_DATA_OUT",
+            "END",
+        };
+    }
+
+    /*
+     * CURLOPT_PROGRESSFUNCTION
+     * typedef int (*curl_progress_callback)(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow);
+     */
+    public interface Progress
+    {
+        public int callback(double dltotal, double dlnow, double ultotal, double ulnow);
+    }
 
     static {
         System.loadLibrary("curl");
     }
+
 }

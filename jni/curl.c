@@ -1,7 +1,7 @@
 /* vim: set sw=4 ts=4:
  * Author: Liu DongMiao <liudongmiao@gmail.com>
  * Created  : Thu 26 Jul 2012 02:13:55 PM CST
- * Modified : Mon 30 Jul 2012 08:05:29 PM CST
+ * Modified : Wed 01 Aug 2012 08:38:18 AM CST
  *
  * CopyRight (c) 2012, Liu DongMiao, <liudongmiao@gmail.com>.
  * All rights reserved.
@@ -897,10 +897,7 @@ static JNINativeMethod methods[] = {
 	{"curl_setopt", "(IILjava/lang/String;)Z", (void*)curl_setopt_string},
 	{"curl_setopt", "(II[Ljava/lang/String;)Z", (void*)curl_setopt_array},
 	{"curl_setopt", "(II[B)Z", (void*)curl_setopt_bytes},
-	{"curl_setopt", "(IILme/piebridge/curl/Read;)Z", (void*)curl_setopt_callback},
-	{"curl_setopt", "(IILme/piebridge/curl/Write;)Z", (void*)curl_setopt_callback},
-	{"curl_setopt", "(IILme/piebridge/curl/Debug;)Z", (void*)curl_setopt_callback},
-	{"curl_setopt", "(IILme/piebridge/curl/Progress;)Z", (void*)curl_setopt_callback},
+	{"curl_setopt", "(IILjava/lang/Object;)Z", (void*)curl_setopt_callback},
 	{"curl_perform", "(I)Z", (void*)curl_perform},
 	{"curl_getinfo", "(II)Ljava/lang/String;", (void*)curl_getinfo},
 	{"curl_getinfo_long", "(II)J", (void*)curl_getinfo_long},
