@@ -2,10 +2,24 @@
 
 SOURCE=/home/sources
 
-ANDROID_ROOT="/mnt/data/android"
+# path of android ndk
 ANDROID_NDK="/opt/android-ndk"
-TOOLCHAIN_VER="4.4.3"
-PLATFORM_VER=8
+# toolchain version
+# android-ndk r8b supports 4.4.3 and 4.6
+TOOLCHAIN_VERSION="4.4.3"
+# platform version, i.e. api level
+PLATFORM_VERSION=8
+# target
+TARGET=arm-linux-androideabi
+# path
+PATH=$ANDROID_NDK/toolchains/$TARGET-$TOOLCHAIN_VERSION/prebuilt/linux-x86/bin:$PATH
+# the fullpath of libgcc.a
+LIBGCCA=`ls $ANDROID_NDK/toolchains/$TARGET-$TOOLCHAIN_VERSION/prebuilt/linux-x86/lib/gcc/$TARGET/*/thumb/libgcc.a`
+
+# the path of openssl
+OPENSSL_PREFIX=/mnt/data/android/external/openssl
+# the path of libcrypto.so libssl.so, can get it from /system/lib
+OPENSSL_LIBDIR=/mnt/data/android/out/target/product/generic/system/lib
 
 CURL_VERSION=7.27.0
 C_ARES_VERSION=1.9.1
@@ -23,27 +37,23 @@ tar xf $SOURCE/c-ares-$C_ARES_VERSION.tar.*
 mv c-ares-$C_ARES_VERSION ares
 
 pushd curl
-ANDROID_ROOT="$ANDROID_ROOT" \
-ANDROID_NDK="$ANDROID_NDK" \
-TOOLCHAIN_VER="$TOOLCHAIN_VER"  \
-PLATFORM_VER="$PLATFORM_VER" \
-CROSS_COMPILE=arm-eabi- \
-PATH=$ANDROID_ROOT/prebuilt/linux-x86/toolchain/arm-eabi-$TOOLCHAIN_VER/bin:$PATH  \
-CPPFLAGS="-DANDROID -I $ANDROID_ROOT/system/core/include -I$ANDROID_NDK/platforms/android-$PLATFORM_VER/arch-arm/usr/include -I$ANDROID_ROOT/bionic/libc/include -I$ANDROID_ROOT/bionic/libc/kernel/common -I$ANDROID_ROOT/bionic/libc/kernel/arch-arm -L$ANDROID_NDK/platforms/android-$PLATFORM_VER/arch-arm/usr/lib -I$ANDROID_ROOT/external/openssl/include -L$ANDROID_ROOT/out/target/product/generic/system/lib " \
-CFLAGS="-fno-exceptions -Wno-multichar -mthumb-interwork -mthumb -nostdlib -lc -ldl " \
-./configure CC=arm-eabi-gcc --host=arm-linux --enable-ipv6 --disable-manual --with-random=/dev/urandom --with-ssl ac_cv_header_openssl_x509_h=yes ac_cv_header_openssl_rsa_h=yes ac_cv_header_openssl_crypto_h=yes ac_cv_header_openssl_pem_h=yes ac_cv_header_openssl_ssl_h=yes ac_cv_header_openssl_err_h=yes ac_cv_header_openssl_pkcs12_h=yes ac_cv_header_openssl_engine_h=yes --without-ca-bundle --without-ca-path --with-zlib --enable-ares $CURL_EXTRA || exit 1
+./configure CC=$TARGET-gcc --host=arm-linux \
+	CPPFLAGS="-DANDROID -I$ANDROID_NDK/platforms/android-$PLATFORM_VERSION/arch-arm/usr/include " \
+	CFLAGS="-fno-exceptions -Wno-multichar -mthumb-interwork -mthumb -nostdlib " \
+	LIBS="-lc -ldl -lz $LIBGCCA " \
+	LDFLAGS="-L$ANDROID_NDK/platforms/android-$PLATFORM_VERSION/arch-arm/usr/lib -L$OPENSSL_LIBDIR " \
+	--enable-ipv6 --disable-manual --with-random=/dev/urandom \
+	--with-ssl=$OPENSSL_PREFIX --without-ca-bundle --without-ca-path \
+	--with-zlib --enable-ares $CURL_EXTRA || exit 1
 popd
 
 pushd ares
-ANDROID_ROOT="$ANDROID_ROOT" \
-ANDROID_NDK="$ANDROID_NDK" \
-TOOLCHAIN_VER="$TOOLCHAIN_VER"  \
-PLATFORM_VER="$PLATFORM_VER" \
-CROSS_COMPILE=arm-eabi- \
-PATH=$ANDROID_ROOT/prebuilt/linux-x86/toolchain/arm-eabi-$TOOLCHAIN_VER/bin:$PATH  \
-CPPFLAGS="-DANDROID -I $ANDROID_ROOT/system/core/include -I$ANDROID_NDK/platforms/android-$PLATFORM_VER/arch-arm/usr/include -I$ANDROID_ROOT/bionic/libc/include -I$ANDROID_ROOT/bionic/libc/kernel/common -I$ANDROID_ROOT/bionic/libc/kernel/arch-arm -L$ANDROID_NDK/platforms/android-$PLATFORM_VER/arch-arm/usr/lib -L$ANDROID_ROOT/out/target/product/generic/system/lib " \
-CFLAGS="-fno-exceptions -Wno-multichar -mthumb-interwork -mthumb -nostdlib -lc -ldl " \
-./configure CC=arm-eabi-gcc --host=arm-linux --with-random=/dev/urandom || exit 1
+./configure CC=$TARGET-gcc --host=arm-linux \
+	CPPFLAGS="-DANDROID -I$ANDROID_NDK/platforms/android-$PLATFORM_VERSION/arch-arm/usr/include " \
+	CFLAGS="-fno-exceptions -Wno-multichar -mthumb-interwork -mthumb -nostdlib " \
+	LIBS="-lc -ldl " \
+	LDFLAGS="-L$ANDROID_NDK/platforms/android-$PLATFORM_VERSION/arch-arm/usr/lib " \
+	--with-random=/dev/urandom || exit 1
 popd
 
 popd
