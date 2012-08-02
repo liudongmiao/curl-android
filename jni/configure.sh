@@ -5,7 +5,7 @@ SOURCE=/home/sources
 ANDROID_ROOT="/mnt/data/android"
 ANDROID_NDK="/opt/android-ndk"
 TOOLCHAIN_VER="4.4.3"
-PLATFORM_VER=5
+PLATFORM_VER=8
 
 CURL_VERSION=7.27.0
 C_ARES_VERSION=1.9.1

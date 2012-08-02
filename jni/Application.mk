@@ -1,1 +1,1 @@
-APP_PLATFORM := android-5
+APP_PLATFORM := android-8
