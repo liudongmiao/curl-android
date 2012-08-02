@@ -1,7 +1,7 @@
 /* vim: set sw=4 ts=4:
  * Author: Liu DongMiao <liudongmiao@gmail.com>
  * Created  : Thu 26 Jul 2012 02:13:55 PM CST
- * Modified : Wed 01 Aug 2012 08:38:18 AM CST
+ * Modified : Fri 03 Aug 2012 05:50:23 AM CST
  *
  * CopyRight (c) 2012, Liu DongMiao, <liudongmiao@gmail.com>.
  * All rights reserved.
@@ -376,16 +376,62 @@ static jboolean curl_setopt_bytes(JNIEnv *env, jobject clazz, jint handle, jint 
 }
 
 typedef struct {
-	JNIEnv *env;
 	jobject object;
 	jmethodID method;
-} callback;
+} jfunction;
 
-static callback *readfunction;
-static callback *writefunction;
-static callback *headerfunction;
-static callback *debugfunction;
-static callback *progressfunction;
+typedef struct {
+	JavaVM *vm;
+	jint version;
+	jfunction read;
+	jfunction write;
+	jfunction header;
+	jfunction debug;
+	jfunction progress;
+} callback_t;
+
+#define SIG_READ "([B)I"
+#define SIG_WRITE "([B)I"
+#define SIG_DEBUG "(I[B)I"
+#define SIG_PROGRESS "(DDDD)I"
+
+static callback_t *callback = NULL;
+#define jvm callback->vm
+#define readobject callback->read.object
+#define readmethod callback->read.method
+#define writeobject callback->write.object
+#define writemethod callback->write.method
+#define headerobject callback->header.object
+#define headermethod callback->header.method
+#define debugobject callback->debug.object
+#define debugmethod callback->debug.method
+#define progressobject callback->progress.object
+#define progressmethod callback->progress.method
+
+
+#ifdef DEBUG
+#define JLOGD LOGD
+#else
+#define JLOGD(...) ((void)0)
+#endif
+
+#define assert(x) do { \
+	if (0 == x) {\
+		LOGE("%s: " #x " is null", __FUNCTION__); return 0; \
+	}\
+} while (0)
+
+#define setcallback(type) \
+	JNIEnv *env; \
+	jobject object = type##object; \
+	jmethodID method = type##method; \
+	JLOGD("%s %s +%d", __FUNCTION__, __FILE__, __LINE__); \
+	assert(object); \
+	JLOGD("%s %s +%d, object=%p", __FUNCTION__, __FILE__, __LINE__, object); \
+	assert(method); \
+	JLOGD("%s %s +%d, method=%p", __FUNCTION__, __FILE__, __LINE__, method); \
+	(*jvm)->GetEnv(jvm, (void**)&env, callback->version); \
+	JLOGD("%s %s +%d, env=%p", __FUNCTION__, __FILE__, __LINE__, env)
 
 static size_t curl_read(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
@@ -393,9 +439,8 @@ static size_t curl_read(char *ptr, size_t size, size_t nmemb, void *userdata)
 	jint result;
 	jbyteArray array;
 	jint length = size * nmemb;
-	JNIEnv *env = writefunction->env;
-	jobject object = writefunction->object;
-	jmethodID method = writefunction->method;
+
+	setcallback(read);
 
 	if (length == 0) {
 		LOGE("curl_header length is 0");
@@ -421,9 +466,8 @@ static size_t curl_write(char *ptr, size_t size, size_t nmemb, void *userdata)
 	jint result;
 	jbyteArray array;
 	jint length = size * nmemb;
-	JNIEnv *env = writefunction->env;
-	jobject object = writefunction->object;
-	jmethodID method = writefunction->method;
+
+	setcallback(write);
 
 	if (length == 0) {
 		LOGE("curl_header length is 0");
@@ -447,9 +491,8 @@ static size_t curl_header(char *ptr, size_t size, size_t nmemb, void *userdata)
 	jint result;
 	jbyteArray array;
 	jint length = size * nmemb;
-	JNIEnv *env = headerfunction->env;
-	jobject object = headerfunction->object;
-	jmethodID method = headerfunction->method;
+
+	setcallback(header);
 
 	if (length == 0) {
 		LOGE("curl_header length is 0");
@@ -472,9 +515,8 @@ static int curl_debug(CURL *handle, curl_infotype type, char *data, size_t size,
 {
 	jint result;
 	jbyteArray array;
-	JNIEnv *env = debugfunction->env;
-	jobject object = debugfunction->object;
-	jmethodID method = debugfunction->method;
+
+	setcallback(debug);
 
 	if (size == 0) {
 		LOGD("curl_debug size is 0");
@@ -496,9 +538,8 @@ static int curl_debug(CURL *handle, curl_infotype type, char *data, size_t size,
 static int curl_progress(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow)
 {
 	jint result;
-	JNIEnv *env = progressfunction->env;
-	jobject object = progressfunction->object;
-	jmethodID method = progressfunction->method;
+
+	setcallback(progress);
 
 	result = (*env)->CallIntMethod(env, object, method, dltotal, dlnow, ultotal, ulnow);
 
@@ -507,7 +548,6 @@ static int curl_progress(void *clientp, double dltotal, double dlnow, double ult
 
 static jboolean curl_setopt_callback(JNIEnv *env, jobject clazz, jint handle, jint option, jobject value)
 {
-	callback **cb;
 	const char *sig;
 	jclass class;
 	jmethodID method;
@@ -518,24 +558,17 @@ static jboolean curl_setopt_callback(JNIEnv *env, jobject clazz, jint handle, ji
 
 	switch (option) {
 		case CURLOPT_READFUNCTION:
-			sig = "([B)I";
-			cb = &readfunction;
+			sig = SIG_READ;
 			break;
 		case CURLOPT_WRITEFUNCTION:
-			sig = "([B)I";
-			cb = &writefunction;
-			break;
 		case CURLOPT_HEADERFUNCTION:
-			sig = "([B)I";
-			cb = &headerfunction;
+			sig = SIG_WRITE;
 			break;
 		case CURLOPT_DEBUGFUNCTION:
-			sig = "(I[B)I";
-			cb = &debugfunction;
+			sig = SIG_DEBUG;
 			break;
 		case CURLOPT_PROGRESSFUNCTION:
-			sig = "(DDDD)I";
-			cb = &progressfunction;
+			sig = SIG_PROGRESS;
 			break;
 		default:
 			return JNI_FALSE;
@@ -544,37 +577,39 @@ static jboolean curl_setopt_callback(JNIEnv *env, jobject clazz, jint handle, ji
 	class = (*env)->GetObjectClass(env, value);
 	method = (*env)->GetMethodID(env, class, "callback", sig);
 	if (method == 0) {
+		LOGE("%s: cannot find function callback %s", __FUNCTION__, sig);
 		return JNI_FALSE;
 	}
-
-	*cb = malloc(sizeof(**cb));
-	if (!(*cb)) {
-		return JNI_FALSE;
-	}
-
-	(*cb)->env = env;
-	(*cb)->object = value;
-	(*cb)->method = method;
 
 	switch (option) {
 		case CURLOPT_READFUNCTION:
 			LOGD("set readfunction");
+			readobject = (*env)->NewGlobalRef(env, value);
+			readmethod = method;
 			curl_easy_setopt(curl, option, curl_read);
 			break;
 		case CURLOPT_WRITEFUNCTION:
 			LOGD("set writefunction");
+			writeobject = (*env)->NewGlobalRef(env, value);
+			writemethod = method;
 			curl_easy_setopt(curl, option, curl_write);
 			break;
 		case CURLOPT_HEADERFUNCTION:
 			LOGD("set headerfunction");
+			headerobject = (*env)->NewGlobalRef(env, value);
+			headermethod = method;
 			curl_easy_setopt(curl, option, curl_header);
 			break;
 		case CURLOPT_DEBUGFUNCTION:
 			LOGD("set debugfunction");
+			debugobject = (*env)->NewGlobalRef(env, value);
+			debugmethod = method;
 			curl_easy_setopt(curl, option, curl_debug);
 			break;
 		case CURLOPT_PROGRESSFUNCTION:
 			LOGD("set progressfunction");
+			progressobject = (*env)->NewGlobalRef(env, value);
+			progressmethod = method;
 			curl_easy_setopt(curl, option, curl_progress);
 			break;
 	}
@@ -876,18 +911,25 @@ static jstring curl_error(JNIEnv *env, jobject clazz)
 	return (*env)->NewStringUTF(env, curl_easy_strerror(code));
 }
 
-#define FREE(x) do { free(x); x = NULL; } while (0)
+#define deleteref(x) do {\
+	if (x) {\
+		(*env)->DeleteGlobalRef(env, x);\
+	}\
+} while (0)
 static void curl_cleanup(JNIEnv *env, jobject clazz, jint handle)
 {
 	CURL *curl = (CURL *)handle;
 	if (NULL != curl) {
 		curl_easy_cleanup(curl);
 	}
-	FREE(readfunction);
-	FREE(writefunction);
-	FREE(headerfunction);
-	FREE(debugfunction);
-	FREE(progressfunction);
+
+	if (callback) {
+		deleteref(readobject);
+		deleteref(writeobject);
+		deleteref(headerobject);
+		deleteref(debugobject);
+		deleteref(progressobject);
+	}
 }
 
 static JNINativeMethod methods[] = {
@@ -917,6 +959,14 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved)
 	if ((*vm)->GetEnv(vm, (void **)&env, JNI_VERSION_1_6) != JNI_OK) {
 		return -1;
 	}
+
+	callback = (callback_t *)calloc(1, sizeof(callback_t));
+	if (callback == NULL) {
+		LOGE("%s out of memory", __FUNCTION__);
+		return -1;
+	}
+	(*env)->GetJavaVM(env, &(callback->vm));
+	callback->version = (*env)->GetVersion(env);
 
 	clazz = (*env)->FindClass(env, CLASSNAME);
 	if (clazz == NULL) {
