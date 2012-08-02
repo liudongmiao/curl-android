@@ -17,7 +17,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.widget.TextView;
 import android.util.Log;
-import me.piebridge.curl.*;
+import me.piebridge.curl.Curl;
 import java.util.ArrayList;
 
 public class Demo extends Activity
@@ -32,9 +32,15 @@ public class Demo extends Activity
 
         TextView textView = new TextView(this);
 
-        Data data = new Data();
-        data.getURL("https://piebridge.me/demo.html");
-        textView.setText(data.getData());
+        try {
+            Data data = new Data();
+            data.getURL("https://piebridge.me/demo.html");
+            textView.setText(data.getData());
+        } catch (UnsatisfiedLinkError e) {
+            textView.setText("UnsatisfiedLinkError");
+        } catch (ExceptionInInitializerError e) {
+            textView.setText("ExceptionInInitializerError");
+        }
         setContentView(textView);
     }
 
@@ -59,7 +65,7 @@ public class Demo extends Activity
             // curl_setopt(curl, CURLOPT_HEADER, 1);
 
             // or set CURLOPT_WRITEHEADER to file path
-            curl_setopt(curl, CURLOPT_HEADERFUNCTION, new Write() {
+            curl_setopt(curl, CURLOPT_HEADERFUNCTION, new Curl.Write() {
                 public int callback(byte[] ptr) {
                     if (ptr == null) {
                         Log.d("CURL-J-HEADER", "write null");
@@ -72,7 +78,7 @@ public class Demo extends Activity
             });
 
             // or set CURLOPT_WRITEDATA to file path
-            curl_setopt(curl, CURLOPT_WRITEFUNCTION, new Write() {
+            curl_setopt(curl, CURLOPT_WRITEFUNCTION, new Curl.Write() {
                 public int callback(byte[] ptr) {
                     if (ptr == null) {
                         Log.d("CURL-J-WRITE", "write null");
@@ -85,7 +91,7 @@ public class Demo extends Activity
             });
 
             // or set CURLOPT_STDERR to file path
-            curl_setopt(curl, CURLOPT_DEBUGFUNCTION, new Debug() {
+            curl_setopt(curl, CURLOPT_DEBUGFUNCTION, new Curl.Debug() {
                 public int callback(int type, byte[] ptr) {
                     if (ptr == null) {
                         Log.d("CURL-J-DEBUG", CURLINFO[type] + ": write null");
@@ -100,7 +106,7 @@ public class Demo extends Activity
 
             // simple progress function
             curl_setopt(curl, CURLOPT_NOPROGRESS, 0);
-            curl_setopt(curl, CURLOPT_PROGRESSFUNCTION, new Progress() {
+            curl_setopt(curl, CURLOPT_PROGRESSFUNCTION, new Curl.Progress() {
                 public int callback(double dltotal, double dlnow, double ultotal, double ulnow) {
                     return 0;
                 }

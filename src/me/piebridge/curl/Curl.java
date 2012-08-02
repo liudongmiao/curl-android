@@ -354,7 +354,11 @@ public class Curl
     }
 
     static {
-        System.loadLibrary("curl");
+        try {
+            System.loadLibrary("curl");
+        } catch (UnsatisfiedLinkError e) {
+            throw new UnsatisfiedLinkError();
+        }
     }
 
 }
