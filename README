@@ -2,13 +2,9 @@ curl for android demo.
 
 how to generate libcurl:
 1. edit jni/configure.sh, change the default settings:
-   SOURCE => curl and c-ares source code directory
-   ANDROID_ROOT: android source code directory
-   ANDROID_NDK: android-ndk directory
-   TOOLCHAIN_VER: gcc version
-   PLATFORM_VER: api-level
+   read the script carefully..normally you can keep it as is
 2. run jni/configure.sh
-   if there are may error, check and fix...
+   if there are any error, check and fix...
 3. run ndk-build, generate libcurl.so
 
 libcurl.so size:
