@@ -147,10 +147,10 @@ public class Demo extends Activity
                 }
             }
 
-            String[][] certinfos = curl_getinfo_certinfo(curl, CURLINFO_CERTINFO);
+            Object[] certinfos = curl_getinfo_certinfo(curl, CURLINFO_CERTINFO);
             if (certinfos != null) {
-                for (String[] certinfo: certinfos) {
-                    for (String cert: certinfo) {
+                for (Object certinfo: certinfos) {
+                    for (String cert: (String[])certinfo) {
                         Log.d("CURL-J-CERT", cert);
                     }
                 }

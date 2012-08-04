@@ -293,7 +293,8 @@ public class Curl
     // curl_easy_getinfo with curl_slist
     public static native String[] curl_getinfo_list(int curl, int info);
     // curl_easy_getinfo with certinfo, certinfo is set of curl_slist
-    public static native String[][] curl_getinfo_certinfo(int curl, int info);
+    // Object[] is equal String[][]
+    public static native Object[] curl_getinfo_certinfo(int curl, int info);
     // curl_easy_getinfo with string, including long and double
     public static native String curl_getinfo(int curl, int info);
     public static native void curl_cleanup(int curl);
