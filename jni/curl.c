@@ -782,7 +782,6 @@ static jobjectArray dump_certinfo(JNIEnv *env, struct curl_certinfo *certinfo)
 			return NULL;
 		}
 		(*env)->SetObjectArrayElement(env, result, index, object);
-		(*env)->DeleteLocalRef(env, result);
 	}
 
 	return result;
