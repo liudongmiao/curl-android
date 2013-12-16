@@ -1,14 +1,21 @@
 curl for android demo.
 
 how to generate libcurl:
-1. edit jni/configure.sh, change the default settings:
+0. download aosp (part of it should be ok)
+
+1. generate libc, libssl, liblog, and so
+   shell> make libssl liblog
+2. edit jni/configure.sh, change the default settings:
    read the script carefully..normally you can keep it as is
-2. run jni/configure.sh
+3. run curl-android/jni/configure.sh
    if there are any error, check and fix...
-3. run ndk-build, generate libcurl.so
+4. generate libcurl
+   shell> make libcurl
+5. strip debug from libcurl
+   shell> arm-eabi-strip -g /path/to/libcurl.so
 
 libcurl.so size:
-   (default is https with ares)
+   (default is ftp, https with ares)
    https: ~169K (including http, https)
     ares: ~28K (adding to https, with ares support)
     ipv6: ~0K (no extra size)
