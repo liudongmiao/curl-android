@@ -10,7 +10,7 @@ how to generate libcurl:
 3. run curl-android/jni/configure.sh
    if there are any error, check and fix...
 4. generate libcurl
-   shell> make libcurl
+   shell> ndk-build
 5. strip debug from libcurl
    shell> arm-eabi-strip -g /path/to/libcurl.so
 

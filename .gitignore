@@ -11,3 +11,7 @@ proguard.cfg
 proguard-project.txt
 project.properties
 Makefile
+
+.classpath
+.project
+.settings

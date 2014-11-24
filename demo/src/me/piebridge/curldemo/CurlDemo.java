@@ -11,16 +11,15 @@
  *
  */
 
-package me.piebridge.demo;
+package me.piebridge.curldemo;
 
+import me.piebridge.curl.Curl;
 import android.app.Activity;
 import android.os.Bundle;
-import android.widget.TextView;
 import android.util.Log;
-import me.piebridge.curl.Curl;
-import java.util.ArrayList;
+import android.widget.TextView;
 
-public class Demo extends Activity
+public class CurlDemo extends Activity
 {
 
     /** Called when the activity is first created. */
