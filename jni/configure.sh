@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 if [ x"$ANDROID_SOURCE" = x"" ]; then
 	ANDROID_SOURCE=$PWD
 fi

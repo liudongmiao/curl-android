@@ -34,7 +34,7 @@ public class CurlDemo extends Activity
         try {
             Data data = new Data();
             data.getURL("https://piebridge.me/demo.html");
-            textView.setText(data.getData());
+            textView.setText(Curl.curl_version() + "\n==========\n" + data.getData());
         } catch (UnsatisfiedLinkError e) {
             textView.setText("UnsatisfiedLinkError");
         } catch (ExceptionInInitializerError e) {

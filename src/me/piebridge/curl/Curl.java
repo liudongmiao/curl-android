@@ -356,6 +356,8 @@ public class Curl {
 
     public static native void curl_cleanup(int curl);
 
+    public static native String curl_version();
+
     /*
      * CURLOPT_WRITEFUNCTION
      * CURLOPT_HEADERFUNCTION
@@ -388,9 +390,9 @@ public class Curl {
         public final int CURLINFO_SSL_DATA_IN = 5;
         public final int CURLINFO_SSL_DATA_OUT = 6;
         public final String[] CURLINFO = {
-        	"TEXT",
-        	"HEADER_IN",
-        	"HEADER_OUT",
+            "TEXT",
+            "HEADER_IN",
+            "HEADER_OUT",
             "DATA_IN",
             "DATA_OUT",
             "SSL_DATA_IN",
