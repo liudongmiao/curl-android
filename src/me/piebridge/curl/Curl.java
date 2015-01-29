@@ -317,9 +317,9 @@ public class Curl {
 
     public static native int curl_init();
 
-    public static native int curl_errno();
+    public static native int curl_errno(int curl);
 
-    public static native String curl_error();
+    public static native String curl_error(int ucrl);
 
     // curl_easy_setopt with long, unsigned long, curl_off_t
     public static native boolean curl_setopt(int curl, int option, long value);
@@ -405,8 +405,17 @@ public class Curl {
      * CURLOPT_PROGRESSFUNCTION
      * typedef int (*curl_progress_callback)(void*clientp, double dltotal, double dlnow, double ultotal, double ulnow);
      */
+    @Deprecated
     public interface Progress {
         public int callback(double dltotal, double dlnow, double ultotal, double ulnow);
+    }
+
+    /*
+     * CURLOPT_XFERINFOFUNCTION
+     * typedef int (*curl_xferinfo_callback)(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow);
+     */
+    public interface Xferinfo {
+        public int callback(long dltotal, long dlnow, long ultotal, long ulnow);
     }
 
     static {

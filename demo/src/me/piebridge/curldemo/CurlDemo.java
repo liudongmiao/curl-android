@@ -16,6 +16,7 @@ package me.piebridge.curldemo;
 import me.piebridge.curl.Curl;
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.widget.TextView;
 
@@ -129,7 +130,7 @@ public class CurlDemo extends Activity
             curl_setopt(curl, CURLOPT_CERTINFO, 1);
 
             if (!curl_perform(curl)) {
-                data = curl_error();
+                data = curl_error(curl);
             } else {
                 data += "=====getinfo=====\n";
                 data += "total_time: " + curl_getinfo(curl, CURLINFO_TOTAL_TIME) + "\n";

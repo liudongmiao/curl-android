@@ -1,7 +1,7 @@
 /* vim: set sw=4 ts=4:
  * Author: Liu DongMiao <liudongmiao@gmail.com>
  * Created  : Thu 26 Jul 2012 02:13:55 PM CST
- * Modified : Tue 25 Nov 2014 02:17:54 AM CST
+ * Modified : Fri 30 Jan 2015 01:13:05 AM CST
  *
  * CopyRight (c) 2012, Liu DongMiao, <liudongmiao@gmail.com>.
  * All rights reserved.
@@ -32,32 +32,78 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include "curl/curl.h"
 
 #include <jni.h>
+#ifdef __ANDROID__
 #include <android/log.h>
 #define TAG "CURL-C"
 #define LOGE(...) (__android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__))
 #define LOGD(...) (__android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__))
+#else
+#define LOGE(...) ((void)0)
+#define LOGD(...) ((void)0)
+#endif
 
 #define CLASSNAME "me/piebridge/curl/Curl"
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 
-static CURLcode code;
+#define SIG_READ "([B)I"
+#define SIG_WRITE "([B)I"
+#define SIG_HEADER "([B)I"
+#define SIG_DEBUG "(I[B)I"
+#define SIG_PROGRESS "(DDDD)I"
+#define SIG_XFERINFO "(LLLL)I"
+
+typedef struct {
+	CURL *curl;
+	CURLcode code;
+	jobject *read;
+	jobject *write;
+	jobject *header;
+	jobject *debug;
+	jobject *progress;
+	jobject *xferinfo;
+	struct curl_slist *slists;
+} jcurl_t;
+
+static JavaVM *jvm;
+
+static jint version;
+
+static jmethodID get_method(JNIEnv *env, jobject object, const char *sig)
+{
+	jclass class = (*env)->GetObjectClass(env, object);
+	return (*env)->GetMethodID(env, class, "callback", sig);
+}
 
 static jint curl_init(JNIEnv *env, jobject clazz)
 {
+	jcurl_t *jcurl = NULL;
 	CURL *curl = curl_easy_init();
-	return (int)curl;
+	if (!curl) {
+		return (int)jcurl;
+	}
+	jcurl = (jcurl_t *) malloc(sizeof(jcurl_t));
+	if (jcurl) {
+		memset((void *)jcurl, 0, sizeof(jcurl_t));
+		jcurl->curl = curl;
+	} else {
+		curl_easy_cleanup(curl);
+	}
+	return (int)jcurl;
 }
 
 static jboolean curl_setopt_long(JNIEnv *env, jobject clazz, jint handle, jint option, jlong value)
 {
-	CURL *curl = (CURL *)handle;
-	if (NULL == curl) {
+	CURL *curl;
+	jcurl_t *jcurl = (jcurl_t *)handle;
+	if (NULL == jcurl) {
 		return JNI_FALSE;
 	}
+	curl = jcurl->curl;
 
 	switch (option) {
 		case CURLOPT_SSLENGINE_DEFAULT:
@@ -156,16 +202,16 @@ static jboolean curl_setopt_long(JNIEnv *env, jobject clazz, jint handle, jint o
 		case CURLOPT_MAX_RECV_SPEED_LARGE:
 		case CURLOPT_RESUME_FROM_LARGE:
 		case CURLOPT_MAXFILESIZE_LARGE:
-			code = curl_easy_setopt(curl, option, value);
-			if (CURLE_OK == code) {
+			jcurl->code = curl_easy_setopt(curl, option, value);
+			if (CURLE_OK == jcurl->code) {
 				return JNI_TRUE;
 			}
 			break;
 		/* unsigned long */
 		case CURLOPT_HTTPAUTH:
 		case CURLOPT_PROXYAUTH:
-			code = curl_easy_setopt(curl, option, (unsigned long)value);
-			if (CURLE_OK == code) {
+			jcurl->code = curl_easy_setopt(curl, option, (unsigned long)value);
+			if (CURLE_OK == jcurl->code) {
 				return JNI_TRUE;
 			}
 	}
@@ -176,10 +222,12 @@ static jboolean curl_setopt_string(JNIEnv *env, jobject clazz, jint handle, jint
 {
 	FILE *file;
 	char *param;
-	CURL *curl = (CURL *)handle;
-	if (NULL == curl) {
+	CURL *curl;
+	jcurl_t *jcurl = (jcurl_t *)handle;
+	if (NULL == jcurl) {
 		return JNI_FALSE;
 	}
+	curl = jcurl->curl;
 
 	switch (option) {
 		case CURLOPT_SSL_CIPHER_LIST:
@@ -235,9 +283,9 @@ static jboolean curl_setopt_string(JNIEnv *env, jobject clazz, jint handle, jint
 		case CURLOPT_TLSAUTH_TYPE:
 		case CURLOPT_DNS_SERVERS:
 			param = (char *)(*env)->GetStringUTFChars(env, value, NULL);
-			code = curl_easy_setopt(curl, option, param);
+			jcurl->code = curl_easy_setopt(curl, option, param);
 			(*env)->ReleaseStringUTFChars(env, value, param);
-			if (CURLE_OK == code) {
+			if (CURLE_OK == jcurl->code) {
 				return JNI_TRUE;
 			}
 			break;
@@ -253,8 +301,8 @@ static jboolean curl_setopt_string(JNIEnv *env, jobject clazz, jint handle, jint
 				LOGE("cannot open: %s", strerror(errno));
 				return JNI_FALSE;
 			}
-			code = curl_easy_setopt(curl, option, file);
-			if (CURLE_OK == code) {
+			jcurl->code = curl_easy_setopt(curl, option, file);
+			if (CURLE_OK == jcurl->code) {
 				return JNI_TRUE;
 			}
 			break;
@@ -262,8 +310,7 @@ static jboolean curl_setopt_string(JNIEnv *env, jobject clazz, jint handle, jint
 	return JNI_FALSE;
 }
 
-static struct curl_slist *slists = NULL;
-static void append(struct curl_slist *slist)
+static void append(struct curl_slist *slists, struct curl_slist *slist)
 {
 	struct curl_slist *head;
 	if (NULL == slists) {
@@ -281,10 +328,12 @@ static jboolean curl_setopt_array(JNIEnv *env, jobject clazz, jint handle, jint 
 {
 	int i, count;
 	struct curl_slist *slist = NULL;
-	CURL *curl = (CURL *)handle;
-	if (NULL == curl) {
+	CURL *curl;
+	jcurl_t *jcurl = (jcurl_t *)handle;
+	if (NULL == jcurl) {
 		return JNI_FALSE;
 	}
+	curl = jcurl->curl;
 
 	switch (option) {
 		case CURLOPT_HTTPHEADER:
@@ -312,13 +361,13 @@ static jboolean curl_setopt_array(JNIEnv *env, jobject clazz, jint handle, jint 
 		}
 	}
 
-	code = curl_easy_setopt(curl, option, slist);
-	if (CURLE_OK != code) {
+	jcurl->code = curl_easy_setopt(curl, option, slist);
+	if (CURLE_OK != jcurl->code) {
 		curl_slist_free_all(slist);
 		return JNI_FALSE;
 	}
 
-	append(slist);
+	append(jcurl->slists, slist);
 
 	return JNI_TRUE;
 }
@@ -326,10 +375,12 @@ static jboolean curl_setopt_array(JNIEnv *env, jobject clazz, jint handle, jint 
 static jboolean curl_setopt_bytes(JNIEnv *env, jobject clazz, jint handle, jint option, jbyteArray value)
 {
 	jbyte *data;
-	CURL *curl = (CURL *)handle;
-	if (NULL == curl) {
+	CURL *curl;
+	jcurl_t *jcurl = (jcurl_t *)handle;
+	if (NULL == jcurl) {
 		return JNI_FALSE;
 	}
+	curl = jcurl->curl;
 
 	switch (option) {
 		case CURLOPT_POSTFIELDS:
@@ -363,9 +414,9 @@ static jboolean curl_setopt_bytes(JNIEnv *env, jobject clazz, jint handle, jint 
 		return JNI_FALSE;
 	}
 
-	code = curl_easy_setopt(curl, option, data);
+	jcurl->code = curl_easy_setopt(curl, option, data);
 
-	if (CURLE_OK != code) {
+	if (CURLE_OK != jcurl->code) {
 		(*env)->ReleaseByteArrayElements(env, value, data, 0);
 		return JNI_FALSE;
 	}
@@ -375,84 +426,27 @@ static jboolean curl_setopt_bytes(JNIEnv *env, jobject clazz, jint handle, jint 
 	return JNI_TRUE;
 }
 
-typedef struct {
-	jobject object;
-	jmethodID method;
-} jfunction;
-
-typedef struct {
-	JavaVM *vm;
-	jint version;
-	jfunction read;
-	jfunction write;
-	jfunction header;
-	jfunction debug;
-	jfunction progress;
-} callback_t;
-
-#define SIG_READ "([B)I"
-#define SIG_WRITE "([B)I"
-#define SIG_DEBUG "(I[B)I"
-#define SIG_PROGRESS "(DDDD)I"
-
-static callback_t *callback = NULL;
-#define jvm callback->vm
-#define readobject callback->read.object
-#define readmethod callback->read.method
-#define writeobject callback->write.object
-#define writemethod callback->write.method
-#define headerobject callback->header.object
-#define headermethod callback->header.method
-#define debugobject callback->debug.object
-#define debugmethod callback->debug.method
-#define progressobject callback->progress.object
-#define progressmethod callback->progress.method
-
-
-#ifdef DEBUG
-#define JLOGD LOGD
-#else
-#define JLOGD(...) ((void)0)
-#endif
-
-#define assert(x) do { \
-	if (0 == x) {\
-		LOGE("%s: " #x " is null", __FUNCTION__); return 0; \
-	}\
-} while (0)
-
-#define setcallback(type) \
-	JNIEnv *env; \
-	jobject object = type##object; \
-	jmethodID method = type##method; \
-	JLOGD("%s %s +%d", __FUNCTION__, __FILE__, __LINE__); \
-	assert(object); \
-	JLOGD("%s %s +%d, object=%p", __FUNCTION__, __FILE__, __LINE__, object); \
-	assert(method); \
-	JLOGD("%s %s +%d, method=%p", __FUNCTION__, __FILE__, __LINE__, method); \
-	(*jvm)->GetEnv(jvm, (void**)&env, callback->version); \
-	JLOGD("%s %s +%d, env=%p", __FUNCTION__, __FILE__, __LINE__, env)
-
 static size_t curl_read(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
+	JNIEnv *env;
 	jbyte *data;
 	jint result;
 	jbyteArray array;
 	jint length = size * nmemb;
-
-	setcallback(read);
+	jobject *object = (jobject *)userdata;
 
 	if (length == 0) {
-		LOGE("curl_header length is 0");
+		LOGE("%s length is 0", __FUNCTION__);
 		return 0;
 	}
 
+	(*jvm)->GetEnv(jvm, (void**)&env, version);
 	array = (*env)->NewByteArray(env, length);
 	if (!array) {
 		LOGE("curl_read could not create new byte[]");
 		return 0;
 	}
-	result = (*env)->CallIntMethod(env, object, method, array);
+	result = (*env)->CallIntMethod(env, object, get_method(env, object, SIG_READ), array);
 	data = (*env)->GetByteArrayElements(env, array, NULL);
 	memcpy(ptr, data, result);
 	(*env)->ReleaseByteArrayElements(env, array, data, 0);
@@ -463,24 +457,25 @@ static size_t curl_read(char *ptr, size_t size, size_t nmemb, void *userdata)
 
 static size_t curl_write(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
+	JNIEnv *env;
 	jint result;
 	jbyteArray array;
 	jint length = size * nmemb;
-
-	setcallback(write);
+	jobject *object = (jobject *)userdata;
 
 	if (length == 0) {
-		LOGE("curl_header length is 0");
+		LOGE("%s length is 0", __FUNCTION__);
 		return 0;
 	}
 
+	(*jvm)->GetEnv(jvm, (void**)&env, version);
 	array = (*env)->NewByteArray(env, length);
 	if (!array) {
 		LOGE("curl_write could not create new byte[]");
 		return 0;
 	}
 	(*env)->SetByteArrayRegion(env, array, 0, length, (jbyte *)ptr);
-	result = (*env)->CallIntMethod(env, object, method, array);
+	result = (*env)->CallIntMethod(env, object, get_method(env, object, SIG_WRITE), array);
 	(*env)->DeleteLocalRef(env, array);
 
 	return result;
@@ -488,60 +483,76 @@ static size_t curl_write(char *ptr, size_t size, size_t nmemb, void *userdata)
 
 static size_t curl_header(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
+	JNIEnv *env;
 	jint result;
 	jbyteArray array;
 	jint length = size * nmemb;
-
-	setcallback(header);
+	jobject *object = (jobject *)userdata;
 
 	if (length == 0) {
-		LOGE("curl_header length is 0");
+		LOGE("%s length is 0", __FUNCTION__);
 		return 0;
 	}
 
+	(*jvm)->GetEnv(jvm, (void**)&env, version);
 	array = (*env)->NewByteArray(env, length);
 	if (!array) {
-		LOGE("curl_header could not create new byte[]");
+		LOGE("%s could not create new byte[]", __FUNCTION__);
 		return 0;
 	}
+
 	(*env)->SetByteArrayRegion(env, array, 0, length, (jbyte *)ptr);
-	result = (*env)->CallIntMethod(env, object, method, array);
+	result = (*env)->CallIntMethod(env, object, get_method(env, object, SIG_HEADER), array);
 	(*env)->DeleteLocalRef(env, array);
 
 	return result;
 }
 
-static int curl_debug(CURL *handle, curl_infotype type, char *data, size_t size, void *userptr)
+static int curl_debug(CURL *handle, curl_infotype type, char *data, size_t size, void *userdata)
 {
+	JNIEnv *env;
 	jint result;
 	jbyteArray array;
-
-	setcallback(debug);
+	jobject *object = (jobject *)userdata;
 
 	if (size == 0) {
 		LOGD("curl_debug size is 0");
 		return 0;
 	}
 
+	(*jvm)->GetEnv(jvm, (void**)&env, version);
 	array = (*env)->NewByteArray(env, size);
 	if (!array) {
 		LOGE("curl_debug could not create new byte[]");
 		return 0;
 	}
 	(*env)->SetByteArrayRegion(env, array, 0, size, (jbyte *)data);
-	result = (*env)->CallIntMethod(env, object, method, type, array);
+	result = (*env)->CallIntMethod(env, object, get_method(env, object, SIG_DEBUG), type, array);
 	(*env)->DeleteLocalRef(env, array);
 
 	return result;
 }
 
-static int curl_progress(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow)
+static int curl_progress(void *userdata, double dltotal, double dlnow, double ultotal, double ulnow)
 {
+	JNIEnv *env;
 	jint result;
+	jobject *object = (jobject *)userdata;
 
-	setcallback(progress);
+	(*jvm)->GetEnv(jvm, (void**)&env, version);
+	result = (*env)->CallIntMethod(env, object, get_method(env, object, SIG_PROGRESS), dltotal, dlnow, ultotal, ulnow);
 
-	result = (*env)->CallIntMethod(env, object, method, dltotal, dlnow, ultotal, ulnow);
+	return result;
+}
+
+static int curl_xferinfo(void *userdata, long dltotal, long dlnow, long ultotal, long ulnow)
+{
+	JNIEnv *env;
+	jint result;
+	jobject *object = (jobject *)userdata;
+
+	(*jvm)->GetEnv(jvm, (void**)&env, version);
+	result = (*env)->CallIntMethod(env, object, get_method(env, object, SIG_XFERINFO), dltotal, dlnow, ultotal, ulnow);
 
 	return result;
 }
@@ -551,24 +562,31 @@ static jboolean curl_setopt_callback(JNIEnv *env, jobject clazz, jint handle, ji
 	const char *sig;
 	jclass class;
 	jmethodID method;
-	CURL *curl = (CURL *)handle;
-	if (NULL == curl) {
+	CURL *curl;
+	jcurl_t *jcurl = (jcurl_t *)handle;
+	if (NULL == jcurl) {
 		return JNI_FALSE;
 	}
+	curl = jcurl->curl;
 
 	switch (option) {
 		case CURLOPT_READFUNCTION:
 			sig = SIG_READ;
 			break;
 		case CURLOPT_WRITEFUNCTION:
-		case CURLOPT_HEADERFUNCTION:
 			sig = SIG_WRITE;
+			break;
+		case CURLOPT_HEADERFUNCTION:
+			sig = SIG_HEADER;
 			break;
 		case CURLOPT_DEBUGFUNCTION:
 			sig = SIG_DEBUG;
 			break;
 		case CURLOPT_PROGRESSFUNCTION:
 			sig = SIG_PROGRESS;
+			break;
+		case CURLOPT_XFERINFOFUNCTION:
+			sig = SIG_XFERINFO;
 			break;
 		default:
 			return JNI_FALSE;
@@ -584,33 +602,39 @@ static jboolean curl_setopt_callback(JNIEnv *env, jobject clazz, jint handle, ji
 	switch (option) {
 		case CURLOPT_READFUNCTION:
 			LOGD("set readfunction");
-			readobject = (*env)->NewGlobalRef(env, value);
-			readmethod = method;
+			jcurl->read = (*env)->NewGlobalRef(env, value);
 			curl_easy_setopt(curl, option, curl_read);
+			curl_easy_setopt(curl, CURLOPT_READDATA, jcurl->read);
 			break;
 		case CURLOPT_WRITEFUNCTION:
 			LOGD("set writefunction");
-			writeobject = (*env)->NewGlobalRef(env, value);
-			writemethod = method;
+			jcurl->write = (*env)->NewGlobalRef(env, value);
 			curl_easy_setopt(curl, option, curl_write);
+			curl_easy_setopt(curl, CURLOPT_WRITEDATA, jcurl->write);
 			break;
 		case CURLOPT_HEADERFUNCTION:
 			LOGD("set headerfunction");
-			headerobject = (*env)->NewGlobalRef(env, value);
-			headermethod = method;
+			jcurl->header = (*env)->NewGlobalRef(env, value);
 			curl_easy_setopt(curl, option, curl_header);
+			curl_easy_setopt(curl, CURLOPT_HEADERDATA, jcurl->header);
 			break;
 		case CURLOPT_DEBUGFUNCTION:
 			LOGD("set debugfunction");
-			debugobject = (*env)->NewGlobalRef(env, value);
-			debugmethod = method;
+			jcurl->debug = (*env)->NewGlobalRef(env, value);
 			curl_easy_setopt(curl, option, curl_debug);
+			curl_easy_setopt(curl, CURLOPT_DEBUGDATA, jcurl->debug);
 			break;
 		case CURLOPT_PROGRESSFUNCTION:
 			LOGD("set progressfunction");
-			progressobject = (*env)->NewGlobalRef(env, value);
-			progressmethod = method;
+			jcurl->progress = (*env)->NewGlobalRef(env, value);
 			curl_easy_setopt(curl, option, curl_progress);
+			curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, jcurl->progress);
+			break;
+		case CURLOPT_XFERINFOFUNCTION:
+			LOGD("set xferinfofunction");
+			jcurl->xferinfo = (*env)->NewGlobalRef(env, value);
+			curl_easy_setopt(curl, option, curl_xferinfo);
+			curl_easy_setopt(curl, CURLOPT_XFERINFODATA, jcurl->xferinfo);
 			break;
 	}
 
@@ -619,20 +643,22 @@ static jboolean curl_setopt_callback(JNIEnv *env, jobject clazz, jint handle, ji
 
 static jboolean curl_perform(JNIEnv *env, jobject clazz, jint handle)
 {
-	CURL *curl = (CURL *)handle;
-	if (NULL == curl) {
+	CURL *curl;
+	jcurl_t *jcurl = (jcurl_t *)handle;
+	if (NULL == jcurl) {
 		return JNI_FALSE;
 	}
+	curl = jcurl->curl;
 
-	code = curl_easy_perform(curl);
+	jcurl->code = curl_easy_perform(curl);
 
-	if (NULL != slists) {
-		curl_slist_free_all(slists);
-		slists = NULL;
+	if (NULL != jcurl->slists) {
+		curl_slist_free_all(jcurl->slists);
+		jcurl->slists = NULL;
 	}
 
 	fflush(NULL);
-	if (CURLE_OK == code) {
+	if (CURLE_OK == jcurl->code) {
 		return JNI_TRUE;
 	}
 
@@ -642,10 +668,12 @@ static jboolean curl_perform(JNIEnv *env, jobject clazz, jint handle)
 static jlong curl_getinfo_long(JNIEnv *env, jobject clazz, jint handle, jint info)
 {
 	long longp;
-	CURL *curl = (CURL *)handle;
-	if (NULL == curl) {
-		return -1;
+	CURL *curl;
+	jcurl_t *jcurl = (jcurl_t *)handle;
+	if (NULL == jcurl) {
+		return JNI_FALSE;
 	}
+	curl = jcurl->curl;
 
 	switch (info) {
 		case CURLINFO_RESPONSE_CODE:
@@ -666,8 +694,8 @@ static jlong curl_getinfo_long(JNIEnv *env, jobject clazz, jint handle, jint inf
 		case CURLINFO_RTSP_CSEQ_RECV:
 		case CURLINFO_PRIMARY_PORT:
 		case CURLINFO_LOCAL_PORT:
-			code = curl_easy_getinfo(curl, info, &longp);
-			if (CURLE_OK == code) {
+			jcurl->code = curl_easy_getinfo(curl, info, &longp);
+			if (CURLE_OK == jcurl->code) {
 				return longp;
 			}
 			break;
@@ -679,10 +707,12 @@ static jlong curl_getinfo_long(JNIEnv *env, jobject clazz, jint handle, jint inf
 static jdouble curl_getinfo_double(JNIEnv *env, jobject clazz, jint handle, jint info)
 {
 	double doublep;
-	CURL *curl = (CURL *)handle;
-	if (NULL == curl) {
+	CURL *curl;
+	jcurl_t *jcurl = (jcurl_t *)handle;
+	if (NULL == jcurl) {
 		return -1;
 	}
+	curl = jcurl->curl;
 
 	switch (info) {
 		case CURLINFO_TOTAL_TIME:
@@ -698,8 +728,8 @@ static jdouble curl_getinfo_double(JNIEnv *env, jobject clazz, jint handle, jint
 		case CURLINFO_STARTTRANSFER_TIME:
 		case CURLINFO_REDIRECT_TIME:
 		case CURLINFO_APPCONNECT_TIME:
-			code = curl_easy_getinfo(curl, info, &doublep);
-			if (CURLE_OK == code) {
+			jcurl->code = curl_easy_getinfo(curl, info, &doublep);
+			if (CURLE_OK == jcurl->code) {
 				return doublep;
 			}
 			break;
@@ -794,18 +824,19 @@ static jobjectArray curl_getinfo_slist(JNIEnv *env, jobject clazz, jint handle, 
 		struct curl_certinfo *to_certinfo;
 		struct curl_slist *to_slist;
 	} ptr;
-
-	CURL *curl = (CURL *)handle;
-	if (NULL == curl) {
+	CURL *curl;
+	jcurl_t *jcurl = (jcurl_t *)handle;
+	if (NULL == jcurl) {
 		return NULL;
 	}
+	curl = jcurl->curl;
 
 	switch (info) {
 		case CURLINFO_COOKIELIST:
 		case CURLINFO_SSL_ENGINES:
 		case CURLINFO_CERTINFO:
-			code = curl_easy_getinfo(curl, info, &(ptr.to_slist));
-			if (CURLE_OK == code) {
+			jcurl->code = curl_easy_getinfo(curl, info, &(ptr.to_slist));
+			if (CURLE_OK == jcurl->code) {
 				break;
 			}
 		default:
@@ -832,11 +863,12 @@ static jstring curl_getinfo(JNIEnv *env, jobject clazz, jint handle, jint info)
 	double doublep;
 	char value[64];
 	char *charp;
-	CURL *curl = (CURL *)handle;
-
-	if (NULL == curl) {
+	CURL *curl;
+	jcurl_t *jcurl = (jcurl_t *)handle;
+	if (NULL == jcurl) {
 		return (*env)->NewStringUTF(env, "");
 	}
+	curl = jcurl->curl;
 
 	switch (info) {
 		case CURLINFO_RESPONSE_CODE:
@@ -857,8 +889,8 @@ static jstring curl_getinfo(JNIEnv *env, jobject clazz, jint handle, jint info)
 		case CURLINFO_RTSP_CSEQ_RECV:
 		case CURLINFO_PRIMARY_PORT:
 		case CURLINFO_LOCAL_PORT:
-			code = curl_easy_getinfo(curl, info, &longp);
-			if (CURLE_OK == code) {
+			jcurl->code = curl_easy_getinfo(curl, info, &longp);
+			if (CURLE_OK == jcurl->code) {
 				sprintf(value, "%ld", longp);
 				return (*env)->NewStringUTF(env, value);
 			}
@@ -876,8 +908,8 @@ static jstring curl_getinfo(JNIEnv *env, jobject clazz, jint handle, jint info)
 		case CURLINFO_STARTTRANSFER_TIME:
 		case CURLINFO_REDIRECT_TIME:
 		case CURLINFO_APPCONNECT_TIME:
-			code = curl_easy_getinfo(curl, info, &doublep);
-			if (CURLE_OK == code) {
+			jcurl->code = curl_easy_getinfo(curl, info, &doublep);
+			if (CURLE_OK == jcurl->code) {
 				sprintf(value, "%.3f", doublep);
 				return (*env)->NewStringUTF(env, value);
 			}
@@ -890,8 +922,8 @@ static jstring curl_getinfo(JNIEnv *env, jobject clazz, jint handle, jint info)
 		case CURLINFO_PRIMARY_IP:
 		case CURLINFO_RTSP_SESSION_ID:
 		case CURLINFO_LOCAL_IP:
-			code = curl_easy_getinfo(curl, info, &charp);
-			if (CURLE_OK == code) {
+			jcurl->code = curl_easy_getinfo(curl, info, &charp);
+			if (CURLE_OK == jcurl->code) {
 				return (*env)->NewStringUTF(env, charp);
 			}
 			break;
@@ -900,14 +932,22 @@ static jstring curl_getinfo(JNIEnv *env, jobject clazz, jint handle, jint info)
 	return (*env)->NewStringUTF(env, "");
 }
 
-static jint curl_errno(JNIEnv *env, jobject clazz)
+static jint curl_errno(JNIEnv *env, jobject clazz, jint handle)
 {
-	return code;
+	jcurl_t *jcurl = (jcurl_t *)handle;
+	if (NULL == jcurl) {
+		return 0;
+	}
+	return jcurl->code;
 }
 
-static jstring curl_error(JNIEnv *env, jobject clazz)
+static jstring curl_error(JNIEnv *env, jobject clazz, jint handle)
 {
-	return (*env)->NewStringUTF(env, curl_easy_strerror(code));
+	jcurl_t *jcurl = (jcurl_t *)handle;
+	if (NULL == jcurl) {
+		return (*env)->NewStringUTF(env, "");
+	}
+	return (*env)->NewStringUTF(env, curl_easy_strerror(jcurl->code));
 }
 
 #define deleteref(x) do {\
@@ -917,18 +957,20 @@ static jstring curl_error(JNIEnv *env, jobject clazz)
 } while (0)
 static void curl_cleanup(JNIEnv *env, jobject clazz, jint handle)
 {
-	CURL *curl = (CURL *)handle;
-	if (NULL != curl) {
-		curl_easy_cleanup(curl);
+	CURL *curl;
+	jcurl_t *jcurl = (jcurl_t *)handle;
+	if (NULL == jcurl) {
+		return;
 	}
+	curl = jcurl->curl;
+	curl_easy_cleanup(curl);
 
-	if (callback) {
-		deleteref(readobject);
-		deleteref(writeobject);
-		deleteref(headerobject);
-		deleteref(debugobject);
-		deleteref(progressobject);
-	}
+	deleteref(jcurl->read);
+	deleteref(jcurl->write);
+	deleteref(jcurl->header);
+	deleteref(jcurl->debug);
+	deleteref(jcurl->progress);
+	deleteref(jcurl->xferinfo);
 }
 
 static jstring libcurl_version(JNIEnv *env, jobject clazz)
@@ -951,8 +993,8 @@ static JNINativeMethod methods[] = {
 	{"curl_getinfo_list", "(II)[Ljava/lang/String;", (void*)curl_getinfo_slist},
 	{"curl_getinfo_certinfo", "(II)[Ljava/lang/Object;", (void*)curl_getinfo_slist},
 	{"curl_cleanup", "(I)V", (void*)curl_cleanup},
-	{"curl_errno", "()I", (void*)curl_errno},
-	{"curl_error", "()Ljava/lang/String;", (void*)curl_error},
+	{"curl_errno", "(I)I", (void*)curl_errno},
+	{"curl_error", "(I)Ljava/lang/String;", (void*)curl_error},
 	{"curl_version", "()Ljava/lang/String;", (void*)libcurl_version},
 };
 
@@ -965,14 +1007,6 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved)
 		return -1;
 	}
 
-	callback = (callback_t *)calloc(1, sizeof(callback_t));
-	if (callback == NULL) {
-		LOGE("%s out of memory", __FUNCTION__);
-		return -1;
-	}
-	(*env)->GetJavaVM(env, &(callback->vm));
-	callback->version = (*env)->GetVersion(env);
-
 	clazz = (*env)->FindClass(env, CLASSNAME);
 	if (clazz == NULL) {
 		LOGE("Can't find %s", CLASSNAME);
@@ -982,6 +1016,9 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved)
 	if ((*env)->RegisterNatives(env, clazz, methods, ARRAY_SIZE(methods)) < 0) {
 		return -1;
 	}
+
+	(*env)->GetJavaVM(env, &jvm);
+	version = (*env)->GetVersion(env);
 
 	return JNI_VERSION_1_6;
 }
