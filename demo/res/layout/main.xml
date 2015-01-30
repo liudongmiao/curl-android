@@ -13,7 +13,7 @@
         android:id="@+id/dns"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:hint="dns, 8.8.8.8"
+        android:hint="dns"
         android:maxLength="16" >
     </EditText>
 

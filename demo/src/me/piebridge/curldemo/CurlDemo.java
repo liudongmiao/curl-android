@@ -78,9 +78,21 @@ public class CurlDemo extends Activity implements OnClickListener {
             this.url = url;
         }
 
+        public String getDns() {
+            return this.dns;
+        }
+
+        public String getUrl() {
+            return this.url;
+        }
+
         @Override
         protected String doInBackground(String... args) {
-            return getURL(this.dns, this.url);
+            if (!this.isCancelled()) {
+                return getURL(this.dns, this.url);
+            } else {
+                return null;
+            }
         }
 
         @Override
@@ -92,7 +104,11 @@ public class CurlDemo extends Activity implements OnClickListener {
 
         @Override
         protected void onPreExecute() {
-            view.setText("retrieving " + url + "...");
+            if (dns != null && dns.length() > 0) {
+                view.setText("retrieving " + url + "... (" + dns + ")");
+            } else {
+                view.setText("retrieving " + url + "...");
+            }
         }
 
     }
@@ -168,7 +184,9 @@ public class CurlDemo extends Activity implements OnClickListener {
         curl_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 
         // set dns servers
-        curl_setopt(curl, CURLOPT_DNS_SERVERS, dns);
+        if (dns != null && dns.length() > 0) {
+            curl_setopt(curl, CURLOPT_DNS_SERVERS, dns);
+        }
 
         // disable ssl verify
         curl_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
@@ -182,7 +200,7 @@ public class CurlDemo extends Activity implements OnClickListener {
         if (!curl_perform(curl)) {
             data.append(curl_error(curl));
         } else {
-            data.append("=====getinfo=====\n");
+            data.append("\n=====getinfo=====\n");
             data.append("total_time: ");
             data.append(curl_getinfo(curl, CURLINFO_TOTAL_TIME));
             data.append("\n");
@@ -237,17 +255,27 @@ public class CurlDemo extends Activity implements OnClickListener {
         }
     }
 
-    private void doRetrive() {
+    private boolean doRetrive() {
         if (!curlAvailable) {
-            return;
+            return false;
+        }
+        String dns = getText(dnsView, "");
+        String url = getText(urlView, "https://piebridge.me/robots.txt");
+        if (canIgnore(dns, url)) {
+            return false;
         }
         if (task != null) {
             task.cancel(true);
         }
-        String dns = getText(dnsView, "8.8.8.8");
-        String url = getText(urlView, "https://piebridge.me/robots.txt");
         task = new RetriveAsyncTask(contentView, dns, url);
         task.execute();
+        return true;
     }
 
+    private boolean canIgnore(String dns, String url) {
+        if (task != null && task.getStatus() == AsyncTask.Status.RUNNING && task.getDns().equals(dns) && task.getUrl().equals(url)) {
+            return true;
+        }
+        return false;
+    }
 }
