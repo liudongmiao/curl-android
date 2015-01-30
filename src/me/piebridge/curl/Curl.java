@@ -117,6 +117,10 @@ public class Curl {
     public static final int CURLOPT_FOLLOWLOCATION = CURLOPTTYPE_LONG + 52;
     public static final int CURLOPT_TRANSFERTEXT = CURLOPTTYPE_LONG + 53;
     public static final int CURLOPT_PUT = CURLOPTTYPE_LONG + 54;
+    /**
+     * @deprecated by CURLOPT_XFERINFOFUNCTION
+     */
+    @Deprecated
     public static final int CURLOPT_PROGRESSFUNCTION = CURLOPTTYPE_FUNCTIONPOINT + 56;
     public static final int CURLOPT_PROGRESSDATA = CURLOPTTYPE_OBJECTPOINT + 57;
     public static final int CURLOPT_XFERINFODATA = CURLOPT_PROGRESSDATA;
@@ -402,6 +406,7 @@ public class Curl {
     }
 
     /*
+     * @deprecated by Xferinfo
      * CURLOPT_PROGRESSFUNCTION
      * typedef int (*curl_progress_callback)(void*clientp, double dltotal, double dlnow, double ultotal, double ulnow);
      */
@@ -419,11 +424,7 @@ public class Curl {
     }
 
     static {
-        try {
-            System.loadLibrary("curl");
-        } catch (UnsatisfiedLinkError e) {
-            throw new UnsatisfiedLinkError();
-        }
+        System.loadLibrary("curl");
     }
 
 }
