@@ -1,13 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    >
-<TextView  
-    android:layout_width="fill_parent" 
-    android:layout_height="wrap_content" 
-    android:text="Hello World, Http"
-    />
-</LinearLayout>
+    android:orientation="vertical" >
 
+    <TextView
+        android:id="@+id/version"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content" />
+
+    <EditText
+        android:id="@+id/dns"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint="dns, 8.8.8.8"
+        android:maxLength="16" >
+    </EditText>
+
+    <EditText
+        android:id="@+id/url"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:singleLine="true"
+        android:hint="host, https://piebridge.me/robots.txt" >
+    </EditText>
+
+    <Button
+        android:id="@+id/retrive"
+        android:text="Retrive"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" >
+    </Button>
+
+    <ScrollView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content" >
+
+        <TextView
+            android:id="@+id/content"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content" />
+    </ScrollView>
+
+</LinearLayout>
