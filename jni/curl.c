@@ -1,7 +1,7 @@
 /* vim: set sw=4 ts=4:
  * Author: Liu DongMiao <liudongmiao@gmail.com>
  * Created  : Thu 26 Jul 2012 02:13:55 PM CST
- * Modified : Fri 30 Jan 2015 01:13:05 AM CST
+ * Modified : Fri 30 Jan 2015 12:26:53 PM CST
  *
  * CopyRight (c) 2012, Liu DongMiao, <liudongmiao@gmail.com>.
  * All rights reserved.
@@ -55,7 +55,7 @@
 #define SIG_HEADER "([B)I"
 #define SIG_DEBUG "(I[B)I"
 #define SIG_PROGRESS "(DDDD)I"
-#define SIG_XFERINFO "(LLLL)I"
+#define SIG_XFERINFO "(JJJJ)I"
 
 typedef struct {
 	CURL *curl;
