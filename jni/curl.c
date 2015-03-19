@@ -134,6 +134,7 @@ static jmethodID get_method(JNIEnv *env, jobject object, jint option)
 	if (method == NULL) {
 		method = get_method_safely(env, class, "callback", sig);
 	}
+	(*env)->DeleteLocalRef(env, class);
 	return method;
 }
 
