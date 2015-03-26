@@ -1,7 +1,7 @@
 /* vim: set sw=4 ts=4:
  * Author: Liu DongMiao <liudongmiao@gmail.com>
  * Created  : Thu 26 Jul 2012 02:13:55 PM CST
- * Modified : Sat 31 Jan 2015 01:53:05 PM CST
+ * Modified : Thu 26 Mar 2015 11:45:19 PM CST
  *
  * CopyRight (c) 2012, Liu DongMiao, <liudongmiao@gmail.com>.
  * All rights reserved.
@@ -100,7 +100,7 @@ static jmethodID get_method(JNIEnv *env, jobject object, jint option)
 	const char *sig;
 	const char *name;
 	jmethodID method;
-	jclass class = (*env)->GetObjectClass(env, object);
+	jclass class;
 
 	switch (option) {
 		case CURLOPT_READFUNCTION:
@@ -130,6 +130,7 @@ static jmethodID get_method(JNIEnv *env, jobject object, jint option)
 		default:
 			return NULL;
 	}
+	class = (*env)->GetObjectClass(env, object);
 	method = get_method_safely(env, class, name, sig);
 	if (method == NULL) {
 		method = get_method_safely(env, class, "callback", sig);
