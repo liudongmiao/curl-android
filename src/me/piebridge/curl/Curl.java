@@ -19,6 +19,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Locale;
 
 public class Curl {
 
@@ -209,10 +210,6 @@ public class Curl {
     public static final int CURLOPT_CAPATH = CURLOPTTYPE_OBJECTPOINT + 97;
     public static final int CURLOPT_BUFFERSIZE = CURLOPTTYPE_LONG + 98;
     public static final int CURLOPT_NOSIGNAL = CURLOPTTYPE_LONG + 99;
-    /**
-     * @deprecated unsupported.
-     */
-    @Deprecated @Unsupported
     public static final int CURLOPT_SHARE = CURLOPTTYPE_OBJECTPOINT + 100;
     public static final int CURLOPT_PROXYTYPE = CURLOPTTYPE_LONG + 101;
     public static final int CURLOPT_ACCEPT_ENCODING = CURLOPTTYPE_OBJECTPOINT + 102;
@@ -511,6 +508,39 @@ public class Curl {
         "END",
     };
 
+    public static final int CURLSHOPT_SHARE = 1;
+
+    public static final int CURLSHOPT_UNSHARE = 2;
+
+    public static final int CURLSHOPT_LOCKFUNC = 3;
+
+    public static final int CURLSHOPT_UNLOCKFUNC = 4;
+
+    public static final int CURL_LOCK_DATA_COOKIE = 2;
+
+    public static final int CURL_LOCK_DATA_DNS = 3;
+
+    public static final int CURL_LOCK_DATA_SSL_SESSION = 4;
+
+    public static final String[] CURL_LOCK_DATA = {
+        "NONE",
+        "SHARE",
+        "COOKIE",
+        "DNS",
+        "SSL_SESSION",
+        "CONNECT",
+    };
+
+    public static final int CURL_LOCK_ACCESS_SHARED = 1;
+
+    public static final int CURL_LOCK_ACCESS_SINGLE = 2;
+
+    public static final String[] CURL_LOCK_ACCESS = {
+        "NONE",
+        "SHARED",
+        "SINGLE",
+    };
+
     public static native int curl_init(); // NOSONAR
 
     public static native int curl_errno(int curl); // NOSONAR
@@ -660,7 +690,7 @@ public class Curl {
         case CURLINFO_LONG:
             return String.valueOf(curl_getinfo_long(curl, info));
         case CURLINFO_DOUBLE:
-            return String.valueOf(curl_getinfo_double(curl, info));
+            return String.format(Locale.US, "%.3f", curl_getinfo_double(curl, info));
         case CURLINFO_SLIST:
             throw new UnsupportedOperationException("cannot convert byte[][] to string");
         default:
@@ -679,6 +709,14 @@ public class Curl {
     public static native void curl_cleanup(int curl); // NOSONAR
 
     public static native String curl_version(); // NOSONAR
+
+    public static native int curl_share_init(); // NOSONAR
+
+    public static native boolean curl_share_setopt(int share, int option, int value); // NOSONAR
+
+    public static native boolean curl_share_setopt(int share, int option, Callbacks callback); // NOSONAR
+
+    public static native void curl_share_cleanup(int share); // NOSONAR
 
     @Documented
     @Retention(RetentionPolicy.SOURCE)
@@ -759,6 +797,9 @@ public class Curl {
 
         public int xferinfo(long dltotal, long dlnow, long ultotal, long ulnow);
 
+        public void lockshare(int data, int access);
+
+        public void unlockshare(int data);
     }
 
     public abstract static class AbstractCallbacks implements Callbacks {
@@ -791,6 +832,16 @@ public class Curl {
         @Override
         public int xferinfo(long dltotal, long dlnow, long ultotal, long ulnow) {
             return 0;
+        }
+
+        @Override
+        public void lockshare(int data, int access) {
+            // do nothing
+        }
+
+        @Override
+        public void unlockshare(int data) {
+            // do nothing
         }
     }
 

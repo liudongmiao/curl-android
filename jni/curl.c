@@ -1,7 +1,7 @@
 /* vim: set sw=4 ts=4:
  * Author: Liu DongMiao <liudongmiao@gmail.com>
  * Created  : Thu 26 Jul 2012 02:13:55 PM CST
- * Modified : Mon 30 Mar 2015 06:28:09 PM CST
+ * Modified : Tue 31 Mar 2015 07:44:25 AM CST
  *
  * CopyRight (c) 2012, Liu DongMiao, <liudongmiao@gmail.com>.
  * All rights reserved.
@@ -64,6 +64,12 @@ typedef struct {
 	struct curl_slist *slists;
 	struct curl_httppost *formpost;
 } jcurl_t;
+
+typedef struct {
+	CURLSH *share;
+	jobject *lock;
+	jobject *unlock;
+} jshare_t;
 
 static JavaVM *jvm;
 
@@ -167,7 +173,7 @@ static jmethodID get_method(JNIEnv *env, jobject object, jint option)
 	return method;
 }
 
-static jint curl_init(JNIEnv *env, jobject clazz)
+static jint curl_init(JNIEnv *env, jclass clazz)
 {
 	jcurl_t *jcurl = NULL;
 	CURL *curl = curl_easy_init();
@@ -201,8 +207,9 @@ static void append_slists(struct curl_slist *slists, struct curl_slist *slist)
 /**
  * curl_easy_setopt for long, curl_off_t
  */
-static jboolean curl_setopt_long(JNIEnv *env, jobject clazz, jint handle, jint option, jlong value)
+static jboolean curl_setopt_long(JNIEnv *env, jclass clazz, jint handle, jint option, jlong value)
 {
+	jshare_t *jshare;
 	jcurl_t *jcurl = (jcurl_t *)handle;
 	if (NULL == jcurl) {
 		return JNI_FALSE;
@@ -318,6 +325,17 @@ static jboolean curl_setopt_long(JNIEnv *env, jobject clazz, jint handle, jint o
 			if (CURLE_OK == jcurl->code) {
 				return JNI_TRUE;
 			}
+			break;
+		case CURLOPT_SHARE:
+			jshare = (jshare_t *) (jint) value;
+			if (NULL == jshare) {
+				break;
+			}
+			jcurl->code = curl_easy_setopt(jcurl->curl, option, jshare->share);
+			if (CURLE_OK == jcurl->code) {
+				return JNI_TRUE;
+			}
+			break;
 		default:
 			break;
 	}
@@ -327,7 +345,7 @@ static jboolean curl_setopt_long(JNIEnv *env, jobject clazz, jint handle, jint o
 /**
  * curl_easy_setopt for char * or  FILE
  */
-static jboolean curl_setopt_string(JNIEnv *env, jobject clazz, jint handle, jint option, jstring value)
+static jboolean curl_setopt_string(JNIEnv *env, jclass clazz, jint handle, jint option, jstring value)
 {
 	FILE *file;
 	char *param;
@@ -441,7 +459,7 @@ static jboolean curl_setopt_string(JNIEnv *env, jobject clazz, jint handle, jint
 /**
  * curl_easy_setopt for struct curl_slist *
  */
-static jboolean curl_setopt_slist(JNIEnv *env, jobject clazz, jint handle, jint option, jobjectArray value)
+static jboolean curl_setopt_slist(JNIEnv *env, jclass clazz, jint handle, jint option, jobjectArray value)
 {
 	int i, count;
 	struct curl_slist *slist = NULL;
@@ -491,7 +509,7 @@ static jboolean curl_setopt_slist(JNIEnv *env, jobject clazz, jint handle, jint 
 /*
  * curl_easy_setopt for char *
  */
-static jboolean curl_setopt_bytes(JNIEnv *env, jobject clazz, jint handle, jint option, jbyteArray value)
+static jboolean curl_setopt_bytes(JNIEnv *env, jclass clazz, jint handle, jint option, jbyteArray value)
 {
 	jbyte *data;
 	struct curl_slist *slist = NULL;
@@ -875,7 +893,7 @@ static jboolean curl_setopt_httppost(JNIEnv *env, jclass clazz, jint handle, jin
 }
 
 
-static jboolean curl_perform(JNIEnv *env, jobject clazz, jint handle)
+static jboolean curl_perform(JNIEnv *env, jclass clazz, jint handle)
 {
 	jcurl_t *jcurl = (jcurl_t *)handle;
 	if (NULL == jcurl) {
@@ -883,16 +901,6 @@ static jboolean curl_perform(JNIEnv *env, jobject clazz, jint handle)
 	}
 
 	jcurl->code = curl_easy_perform(jcurl->curl);
-
-	if (NULL != jcurl->slists) {
-		curl_slist_free_all(jcurl->slists);
-		jcurl->slists = NULL;
-	}
-
-	if (NULL != jcurl->formpost) {
-		curl_formfree(jcurl->formpost);
-		jcurl->formpost = NULL;
-	}
 
 	fflush(NULL);
 	if (CURLE_OK == jcurl->code) {
@@ -902,7 +910,7 @@ static jboolean curl_perform(JNIEnv *env, jobject clazz, jint handle)
 	return JNI_FALSE;
 }
 
-static jlong curl_getinfo_long(JNIEnv *env, jobject clazz, jint handle, jint info)
+static jlong curl_getinfo_long(JNIEnv *env, jclass clazz, jint handle, jint info)
 {
 	long longp;
 	jcurl_t *jcurl = (jcurl_t *)handle;
@@ -939,7 +947,7 @@ static jlong curl_getinfo_long(JNIEnv *env, jobject clazz, jint handle, jint inf
 	return -1;
 }
 
-static jdouble curl_getinfo_double(JNIEnv *env, jobject clazz, jint handle, jint info)
+static jdouble curl_getinfo_double(JNIEnv *env, jclass clazz, jint handle, jint info)
 {
 	double doublep;
 	jcurl_t *jcurl = (jcurl_t *)handle;
@@ -1053,7 +1061,7 @@ static jobjectArray dump_certinfo(JNIEnv *env, struct curl_certinfo *certinfo)
 	return result;
 }
 
-static jobjectArray curl_getinfo_slist(JNIEnv *env, jobject clazz, jint handle, jint info)
+static jobjectArray curl_getinfo_slist(JNIEnv *env, jclass clazz, jint handle, jint info)
 {
 	jobjectArray result = NULL;
 	union {
@@ -1093,7 +1101,7 @@ static jobjectArray curl_getinfo_slist(JNIEnv *env, jobject clazz, jint handle, 
 	return result;
 }
 
-static jbyteArray curl_getinfo_bytes(JNIEnv *env, jobject clazz, jint handle, jint info)
+static jbyteArray curl_getinfo_bytes(JNIEnv *env, jclass clazz, jint handle, jint info)
 {
 	char *charp;
 	jcurl_t *jcurl = (jcurl_t *)handle;
@@ -1122,7 +1130,7 @@ static jbyteArray curl_getinfo_bytes(JNIEnv *env, jobject clazz, jint handle, ji
 	return NULL;
 }
 
-static jint curl_errno(JNIEnv *env, jobject clazz, jint handle)
+static jint curl_errno(JNIEnv *env, jclass clazz, jint handle)
 {
 	jcurl_t *jcurl = (jcurl_t *)handle;
 	if (NULL == jcurl) {
@@ -1131,7 +1139,7 @@ static jint curl_errno(JNIEnv *env, jobject clazz, jint handle)
 	return jcurl->code;
 }
 
-static jstring curl_error(JNIEnv *env, jobject clazz, jint handle)
+static jstring curl_error(JNIEnv *env, jclass clazz, jint handle)
 {
 	jcurl_t *jcurl = (jcurl_t *)handle;
 	if (NULL == jcurl) {
@@ -1145,7 +1153,7 @@ static jstring curl_error(JNIEnv *env, jobject clazz, jint handle)
 		(*env)->DeleteGlobalRef(env, x);\
 	}\
 } while (0)
-static void curl_cleanup(JNIEnv *env, jobject clazz, jint handle)
+static void curl_cleanup(JNIEnv *env, jclass clazz, jint handle)
 {
 	jcurl_t *jcurl = (jcurl_t *)handle;
 	if (NULL == jcurl) {
@@ -1159,11 +1167,157 @@ static void curl_cleanup(JNIEnv *env, jobject clazz, jint handle)
 	deleteref(jcurl->debug);
 	deleteref(jcurl->progress);
 	deleteref(jcurl->xferinfo);
+
+	if (NULL != jcurl->slists) {
+		curl_slist_free_all(jcurl->slists);
+		jcurl->slists = NULL;
+	}
+
+	if (NULL != jcurl->formpost) {
+		curl_formfree(jcurl->formpost);
+		jcurl->formpost = NULL;
+	}
+	free(jcurl);
 }
 
-static jstring libcurl_version(JNIEnv *env, jobject clazz)
+static jstring libcurl_version(JNIEnv *env, jclass clazz)
 {
 	return (*env)->NewStringUTF(env, curl_version());
+}
+
+static jint jcurl_share_init(JNIEnv *env, jclass clazz)
+{
+	jshare_t *jshare = NULL;
+	CURLSH *share = curl_share_init();
+	if (!share) {
+		return (int)jshare;
+	}
+	jshare = (jshare_t *) malloc(sizeof(jshare_t));
+	if (jshare) {
+		memset((void *)jshare, 0, sizeof(jshare_t));
+		jshare->share = share;
+	} else {
+		curl_share_cleanup(share);
+	}
+	return (int)jshare;
+}
+
+static void jcurl_share_cleanup(JNIEnv *env, jclass clazz, jint handle)
+{
+	jshare_t *jshare = (jshare_t *)handle;
+	if (NULL != jshare) {
+		curl_share_cleanup(jshare->share);
+		deleteref(jshare->lock);
+		deleteref(jshare->unlock);
+		free(jshare);
+	}
+}
+
+static jboolean jcurl_share_setopt(JNIEnv *env, jclass clazz, jint handle, jint option, jint value)
+{
+	CURLSHcode code;
+	jshare_t *jshare = (jshare_t *)handle;
+	if (NULL == jshare) {
+		return JNI_FALSE;
+	}
+
+	switch (option) {
+		case CURLSHOPT_SHARE:
+		case CURLSHOPT_UNSHARE:
+			code = curl_share_setopt(jshare->share, option, value);
+			break;
+		default:
+			return JNI_FALSE;
+	}
+
+	return (code == CURLSHE_OK) ? JNI_TRUE : JNI_FALSE;
+}
+
+static jmethodID get_share_method(JNIEnv *env, jint option)
+{
+	const char *name;
+	const char *sig;
+	jclass class;
+	jmethodID method;
+
+	switch (option) {
+		case CURLSHOPT_LOCKFUNC:
+			name = "lockshare";
+			sig = "(II)V";
+			break;
+		case CURLSHOPT_UNLOCKFUNC:
+			name = "unlockshare";
+			sig = "(I)V";
+			break;
+		default:
+			return NULL;
+	}
+
+	class = (*env)->FindClass(env, CLASSNAME "$Callbacks");
+	if (class == NULL) {
+		LOGE("%s cannot find class: " CLASSNAME "$Callbacks", __FUNCTION__);
+		return JNI_FALSE;
+	}
+	method = get_method_safely(env, class, name, sig);
+	if (method == NULL) {
+		LOGE("%s cannot find method: %s %s", __FUNCTION__, name, sig);
+	}
+	(*env)->DeleteLocalRef(env, class);
+	return method;
+}
+
+static void jcurl_share_lock(CURL *handle, curl_lock_data data, curl_lock_access access, void *userptr)
+{
+	JNIEnv *env = get_env();
+	jshare_t *jshare = (jshare_t *)userptr;
+	jobject object = jshare->lock;
+	jmethodID method = get_share_method(env, CURLSHOPT_LOCKFUNC);
+	(*env)->CallVoidMethod(env, object, method, data, access);
+}
+
+static void jcurl_share_unlock(CURL *handle, curl_lock_data data, void *userptr)
+{
+	JNIEnv *env = get_env();
+	jshare_t *jshare = (jshare_t *)userptr;
+	jobject object = jshare->unlock;
+	jmethodID method = get_share_method(env, CURLSHOPT_UNLOCKFUNC);
+	(*env)->CallVoidMethod(env, object, method, data);
+}
+
+static jboolean jcurl_share_setopt_callback(JNIEnv *env, jclass clazz, jint handle, jint option, jobject value)
+{
+	CURLSHcode code;
+	jmethodID method;
+	jshare_t *jshare = (jshare_t *)handle;
+	if (NULL == jshare) {
+		return JNI_FALSE;
+	}
+
+	method = get_share_method(env, option);
+
+	if (method == NULL) {
+		return JNI_FALSE;
+	}
+
+
+	switch (option) {
+		case CURLSHOPT_LOCKFUNC:
+			jshare->lock = (*env)->NewGlobalRef(env, value);
+			code = curl_share_setopt(jshare->share, option, jcurl_share_lock);
+			break;
+		case CURLSHOPT_UNLOCKFUNC:
+			jshare->unlock = (*env)->NewGlobalRef(env, value);
+			code = curl_share_setopt(jshare->share, option, jcurl_share_unlock);
+			break;
+		default:
+			return JNI_FALSE;
+	}
+
+	if (code != CURLSHE_OK) {
+		return JNI_FALSE;
+	}
+	code = curl_share_setopt(jshare->share, CURLSHOPT_USERDATA, jshare);
+	return (code == CURLSHE_OK)? JNI_TRUE : JNI_FALSE;
 }
 
 static JNINativeMethod methods[] = {
@@ -1185,6 +1339,10 @@ static JNINativeMethod methods[] = {
 	{"curl_errno", "(I)I", (void *)curl_errno},
 	{"curl_error", "(I)Ljava/lang/String;", (void *)curl_error},
 	{"curl_version", "()Ljava/lang/String;", (void *)libcurl_version},
+	{"curl_share_init", "()I", (void *)jcurl_share_init},
+	{"curl_share_cleanup", "(I)V", (void *)jcurl_share_cleanup},
+	{"curl_share_setopt", "(III)Z", (void *)jcurl_share_setopt},
+	{"curl_share_setopt", "(IILme/piebridge/curl/Curl$Callbacks;)Z", (void *)jcurl_share_setopt_callback},
 };
 
 jint JNI_OnLoad(JavaVM *vm, void *reserved)

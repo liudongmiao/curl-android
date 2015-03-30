@@ -208,6 +208,16 @@ public class CurlDemo extends Activity implements OnClickListener {
         public int xferinfo(long dltotal, long dlnow, long ultotal, long ulnow) {
             return 0;
         }
+
+        @Override
+        public void lockshare(int data, int access) {
+            Log.d(TAG, "lock " + CURL_LOCK_DATA[data] + " " + CURL_LOCK_ACCESS[access]);
+        }
+
+        @Override
+        public void unlockshare(int data) {
+            Log.d(TAG, "unlock " + CURL_LOCK_DATA[data]);
+        }
     }
 
     private static NameValuePair[] getForms(String url) {
@@ -248,15 +258,33 @@ public class CurlDemo extends Activity implements OnClickListener {
         }
     }
 
-    public static String getURL(String dns, String url) {
-        final StringBuilder data = new StringBuilder();
+    private static void getInfo(StringBuilder data, int curl) {
+        data.append("\n=====getinfo=====\n");
+        data.append("code: ");
+        data.append(curl_getinfo(curl, CURLINFO_RESPONSE_CODE));
+        data.append("\n");
+        data.append("content-type: ");
+        data.append(curl_getinfo(curl, CURLINFO_CONTENT_TYPE));
+        data.append("\n");
+        data.append("total_time: ");
+        data.append(curl_getinfo(curl, CURLINFO_TOTAL_TIME));
+        data.append("\n");
+        data.append("namelookup_time: ");
+        data.append(curl_getinfo(curl, CURLINFO_NAMELOOKUP_TIME));
+        data.append("\n");
+        data.append("connect_time: ");
+        data.append(curl_getinfo(curl, CURLINFO_CONNECT_TIME));
+        data.append("\n");
+        data.append("starttransfer_time: ");
+        data.append(curl_getinfo(curl, CURLINFO_STARTTRANSFER_TIME));
+        data.append("\n");
+        data.append("redirect_time: ");
+        data.append(curl_getinfo(curl, CURLINFO_REDIRECT_TIME));
+        data.append("\n");
+    }
+
+    public static int getURL(String dns, String url, Callback callback) {
         int curl = curl_init();
-
-        if (0 == curl) {
-            return "curl_init failed";
-        }
-
-        Callback callback = new Callbacks(data);
 
         curl_setopt(curl, CURLOPT_URL, url);
         curl_setopt(curl, CURLOPT_HTTPHEADER, Arrays.asList("User-Agent: Curl/Android"));
@@ -271,7 +299,6 @@ public class CurlDemo extends Activity implements OnClickListener {
             curl_setopt(curl, CURLOPT_POST, 1);
             curl_setopt(curl, CURLOPT_HTTPPOST, forms);
             output = new File(content.getParent(), "post.txt");
-
         }
         // or set CURLOPT_WRITEFUNCTION to callback
         curl_setopt(curl, CURLOPT_FILE, output);
@@ -302,41 +329,43 @@ public class CurlDemo extends Activity implements OnClickListener {
         // enable certificate chain info gatherer
         curl_setopt(curl, CURLOPT_CERTINFO, 1);
 
+        return curl;
+    }
+
+    private static void execute(int curl, StringBuilder data) {
         if (!curl_perform(curl)) {
             data.append(curl_error(curl));
         } else {
-            data.append("(content: see ");
-            data.append(output);
-            data.append(")");
-            data.append("\n=====getinfo=====\n");
-            data.append("code: ");
-            data.append(curl_getinfo(curl, CURLINFO_RESPONSE_CODE));
-            data.append("\n");
-            data.append("content-type: ");
-            data.append(curl_getinfo(curl, CURLINFO_CONTENT_TYPE));
-            data.append("\n");
-            data.append("total_time: ");
-            data.append(curl_getinfo(curl, CURLINFO_TOTAL_TIME));
-            data.append("\n");
-            data.append("namelookup_time: ");
-            data.append(curl_getinfo(curl, CURLINFO_NAMELOOKUP_TIME));
-            data.append("\n");
-            data.append("connect_time: ");
-            data.append(curl_getinfo(curl, CURLINFO_CONNECT_TIME));
-            data.append("\n");
-            data.append("starttransfer_time: ");
-            data.append(curl_getinfo(curl, CURLINFO_STARTTRANSFER_TIME));
-            data.append("\n");
-            data.append("redirect_time: ");
-            data.append(curl_getinfo(curl, CURLINFO_REDIRECT_TIME));
-            data.append("\n");
+            data.append("(content is not showed)");
+            getInfo(data, curl);
         }
-
         dumpCookiesIfNeeded(curl);
-
         dumpCertsIfNeeded(curl);
+    }
 
-        curl_cleanup(curl);
+    public static String getURL(String dns, String url) {
+        final StringBuilder data = new StringBuilder();
+        Callbacks callback = new Callbacks(data);
+
+        int share = curl_share_init();
+        curl_share_setopt(share, CURLSHOPT_LOCKFUNC, callback);
+        curl_share_setopt(share, CURLSHOPT_UNLOCKFUNC, callback);
+        curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE);
+        curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
+
+        int curl1 = getURL(dns, url, callback);
+        int curl2 = getURL(dns, url, callback);
+
+        curl_setopt(curl1, CURLOPT_SHARE, share);
+        curl_setopt(curl2, CURLOPT_SHARE, share);
+
+        execute(curl1, data);
+        execute(curl2, data);
+
+        curl_cleanup(curl1);
+        curl_cleanup(curl2);
+
+        curl_share_cleanup(share);
         return data.toString();
     }
 
