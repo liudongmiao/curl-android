@@ -36,6 +36,8 @@ import android.widget.TextView;
 
 public class CurlDemo extends Activity implements OnClickListener {
 
+    private static final String TAG = "CurlDemo";
+
     private EditText dnsView;
 
     private EditText urlView;
@@ -65,9 +67,11 @@ public class CurlDemo extends Activity implements OnClickListener {
         } catch (UnsatisfiedLinkError e) {
             retrive.setEnabled(false);
             version.setText("UnsatisfiedLinkError");
+            Log.e(TAG, "UnsatisfiedLinkError", e);
         } catch (ExceptionInInitializerError e) {
             retrive.setEnabled(false);
             version.setText("ExceptionInInitializerError");
+            Log.e(TAG, "ExceptionInInitializerError", e);
         }
 
         content = new File(getFilesDir(), "get.txt");
@@ -168,7 +172,7 @@ public class CurlDemo extends Activity implements OnClickListener {
         }
     }
 
-    static class Callbacks extends Curl.Callbacks {
+    static class Callbacks extends Curl.AbstractCallbacks {
 
         private StringBuilder data;
 
@@ -206,6 +210,44 @@ public class CurlDemo extends Activity implements OnClickListener {
         }
     }
 
+    private static NameValuePair[] getForms(String url) {
+        try {
+            URL uri = new URL(url);
+            if (InetAddress.getByName(uri.getHost()).isSiteLocalAddress()) {
+                return Arrays.asList(
+                        new Form("curl", "android"),
+                        new Form("content", Form.FILE_PREFIX + content.getAbsolutePath()),
+                        new FileForm("image", content, "image.png", "image/png")
+                ).toArray(new NameValuePair[0]);
+            }
+        } catch (MalformedURLException e) {
+            Log.w(TAG, "invalid url: " + url, e);
+        } catch (UnknownHostException e) {
+            Log.w(TAG, "invalid url: " + url, e);
+        }
+        return new NameValuePair[0] ;
+    }
+
+    private static void dumpCookiesIfNeeded(int curl) {
+        byte[][] cookies = curl_getinfo_list(curl, CURLINFO_COOKIELIST);
+        if (cookies != null) {
+            for (byte[] cookie : cookies) {
+                Log.d("CURL-J-COOKIE", new String(cookie));
+            }
+        }
+    }
+
+    private static void dumpCertsIfNeeded(int curl) {
+        byte[][][] certinfos = curl_getinfo_certinfo(curl, CURLINFO_CERTINFO);
+        if (certinfos != null) {
+            for (byte[][] certinfo : certinfos) {
+                for (byte[] cert : certinfo) {
+                    Log.d("CURL-J-CERT", new String(cert));
+                }
+            }
+        }
+    }
+
     public static String getURL(String dns, String url) {
         final StringBuilder data = new StringBuilder();
         int curl = curl_init();
@@ -220,32 +262,17 @@ public class CurlDemo extends Activity implements OnClickListener {
         curl_setopt(curl, CURLOPT_HTTPHEADER, Arrays.asList("User-Agent: Curl/Android"));
         curl_setopt(curl, CURLOPT_VERBOSE, 1);
 
-        // CURLOPT_WRITEFUNCTION will have header too if CURLOPT_HEADER is true
-        // curl_setopt(curl, CURLOPT_HEADER, 1);
-
         // or set CURLOPT_WRITEHEADER to file path
         curl_setopt(curl, CURLOPT_HEADERFUNCTION, callback);
 
-
         File output = content;
-        try {
-            URL uri = new URL(url);
-            if (InetAddress.getByName(uri.getHost()).isSiteLocalAddress()) {
-                curl_setopt(curl, CURLOPT_POST, 1);
-                NameValuePair[] forms = Arrays.asList(
-                        new Form("curl", "android"),
-                        new Form("content", Form.FILE_PREFIX + content.getAbsolutePath()),
-                        new FileForm("image", content, "image.png", "image/png")
-                ).toArray(new NameValuePair[0]);
-                curl_setopt(curl, CURLOPT_HTTPPOST, forms);
-                output = new File(content.getParent(), "post.txt");
-            }
-        } catch (MalformedURLException e) {
-            Log.w("", "invalid url: " + url, e);
-        } catch (UnknownHostException e) {
-            Log.w("", "invalid url: " + url, e);
-        }
+        NameValuePair[] forms = getForms(url);
+        if (forms.length > 0) {
+            curl_setopt(curl, CURLOPT_POST, 1);
+            curl_setopt(curl, CURLOPT_HTTPPOST, forms);
+            output = new File(content.getParent(), "post.txt");
 
+        }
         // or set CURLOPT_WRITEFUNCTION to callback
         curl_setopt(curl, CURLOPT_FILE, output);
 
@@ -305,21 +332,9 @@ public class CurlDemo extends Activity implements OnClickListener {
             data.append("\n");
         }
 
-        byte[][] cookies = curl_getinfo_list(curl, CURLINFO_COOKIELIST);
-        if (cookies != null) {
-            for (byte[] cookie : cookies) {
-                Log.d("CURL-J-COOKIE", new String(cookie));
-            }
-        }
+        dumpCookiesIfNeeded(curl);
 
-        byte[][][] certinfos = curl_getinfo_certinfo(curl, CURLINFO_CERTINFO);
-        if (certinfos != null) {
-            for (byte[][] certinfo : certinfos) {
-                for (byte[] cert : certinfo) {
-                    Log.d("CURL-J-CERT", new String(cert));
-                }
-            }
-        }
+        dumpCertsIfNeeded(curl);
 
         curl_cleanup(curl);
         return data.toString();
@@ -327,8 +342,7 @@ public class CurlDemo extends Activity implements OnClickListener {
 
     @Override
     public void onClick(View view) {
-        switch (view.getId()) {
-        case R.id.retrive:
+        if (view.getId() == R.id.retrive) {
             doRetrive();
         }
     }
