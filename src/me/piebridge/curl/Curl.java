@@ -106,7 +106,6 @@ public class Curl {
     public static final int CURLOPT_RESUME_FROM = CURLOPTTYPE_LONG + 21;
     public static final int CURLOPT_COOKIE = CURLOPTTYPE_OBJECTPOINT + 22;
     public static final int CURLOPT_HTTPHEADER = CURLOPTTYPE_OBJECTPOINT + 23;
-    @Deprecated @Unsupported
     public static final int CURLOPT_HTTPPOST = CURLOPTTYPE_OBJECTPOINT + 24;
     public static final int CURLOPT_SSLCERT = CURLOPTTYPE_OBJECTPOINT + 25;
     public static final int CURLOPT_KEYPASSWD = CURLOPTTYPE_OBJECTPOINT + 26;
@@ -391,6 +390,24 @@ public class Curl {
     public static final int CURL_IPRESOLVE_V4 = 1;
     public static final int CURL_IPRESOLVE_V6 = 2;
 
+    public static final int CURLINFO_TEXT = 0;
+    public static final int CURLINFO_HEADER_IN = 1;
+    public static final int CURLINFO_HEADER_OUT = 2;
+    public static final int CURLINFO_DATA_IN = 3;
+    public static final int CURLINFO_DATA_OUT = 4;
+    public static final int CURLINFO_SSL_DATA_IN = 5;
+    public static final int CURLINFO_SSL_DATA_OUT = 6;
+    public static final String[] CURLINFO = {
+        "TEXT",
+        "HEADER_IN",
+        "HEADER_OUT",
+        "DATA_IN",
+        "DATA_OUT",
+        "SSL_DATA_IN",
+        "SSL_DATA_OUT",
+        "END",
+    };
+
     public static native int curl_init();
 
     public static native int curl_errno(int curl);
@@ -461,6 +478,14 @@ public class Curl {
         }
         return curl_setopt(curl, option, bytes.toArray(new byte[0][0]));
     }
+
+    /**
+     * @param curl
+     * @param option
+     * @param value
+     * @return true if success, false if fail
+     */
+    public static native boolean curl_setopt(int curl, int option, NameValuePair[] value);
 
     /**
      * curl_easy_setopt with struct curl_slist *
@@ -561,65 +586,61 @@ public class Curl {
 
     }
 
-    /*
-     * CURLOPT_WRITEFUNCTION
-     * CURLOPT_HEADERFUNCTION
-     * size_t function(void *ptr, size_t size, size_t nmemb, void *userdata);
-     */
+    public interface NameValuePair {
+        String getName();
+        String getValue();
+    }
+
+    @Deprecated
     public interface Write extends Callback {
         public int callback(byte[] ptr);
     }
 
-    /*
-     * CURLOPT_READFUNCTION
-     * size_t function(void *ptr, size_t size, size_t nmemb, void *userdata);
-     */
+    @Deprecated
     public interface Read extends Callback {
         public int callback(byte[] ptr);
     }
 
-    /*
-     * CURLOPT_DEBUGFUNCTION
-     * int curl_debug_callback(CURL *, curl_infotype, char*, size_t, void *);
-     */
+    @Deprecated
     public interface Debug extends Callback {
         public int callback(int type, byte[] ptr);
-
-        public final int CURLINFO_TEXT = 0;
-        public final int CURLINFO_HEADER_IN = 1;
-        public final int CURLINFO_HEADER_OUT = 2;
-        public final int CURLINFO_DATA_IN = 3;
-        public final int CURLINFO_DATA_OUT = 4;
-        public final int CURLINFO_SSL_DATA_IN = 5;
-        public final int CURLINFO_SSL_DATA_OUT = 6;
-        public final String[] CURLINFO = {
-            "TEXT",
-            "HEADER_IN",
-            "HEADER_OUT",
-            "DATA_IN",
-            "DATA_OUT",
-            "SSL_DATA_IN",
-            "SSL_DATA_OUT",
-            "END",
-        };
     }
 
-    /*
-     * @deprecated by Xferinfo
-     * CURLOPT_PROGRESSFUNCTION
-     * typedef int (*curl_progress_callback)(void*clientp, double dltotal, double dlnow, double ultotal, double ulnow);
-     */
     @Deprecated
     public interface Progress extends Callback {
         public int callback(double dltotal, double dlnow, double ultotal, double ulnow);
     }
 
-    /*
-     * CURLOPT_XFERINFOFUNCTION
-     * typedef int (*curl_xferinfo_callback)(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow);
-     */
+    @Deprecated
     public interface Xferinfo extends Callback {
         public int callback(long dltotal, long dlnow, long ultotal, long ulnow);
+    }
+
+    public static abstract class Callbacks implements Callback {
+
+        public int write(byte[] bytes) {
+            return bytes.length;
+        }
+
+        public int header(byte[] bytes) {
+            return bytes.length;
+        }
+
+        public int read(byte[] bytes) {
+            return bytes.length;
+        }
+
+        public int debug(int type, byte[] bytes) {
+            return 0;
+        }
+
+        public int progress(double dltotal, double dlnow, double ultotal, double ulnow) {
+            return 0;
+        }
+
+        public int xferinfo(long dltotal, long dlnow, long ultotal, long ulnow) {
+            return 0;
+        }
     }
 
     static {

@@ -15,9 +15,15 @@ package me.piebridge.curldemo;
 
 import static me.piebridge.curl.Curl.*;
 
+import java.io.File;
+import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 
 import me.piebridge.curl.Curl;
+import me.piebridge.curl.Curl.NameValuePair;
 import android.app.Activity;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -39,6 +45,8 @@ public class CurlDemo extends Activity implements OnClickListener {
     private TextView contentView;
 
     private boolean curlAvailable = false;
+
+    private static File content;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -62,6 +70,7 @@ public class CurlDemo extends Activity implements OnClickListener {
             version.setText("ExceptionInInitializerError");
         }
 
+        content = new File(getFilesDir(), "get.txt");
         doRetrive();
     }
 
@@ -115,6 +124,65 @@ public class CurlDemo extends Activity implements OnClickListener {
 
     }
 
+    static class Form implements NameValuePair {
+
+        private String name;
+        private String value;
+
+        public Form(String name, String value) {
+            this.name = name;
+            this.value = value;
+        }
+
+        @Override
+        public String getName() {
+            return this.name;
+        }
+
+        @Override
+        public String getValue() {
+            return this.value;
+        }
+    }
+
+    static class Callbacks extends Curl.Callbacks {
+
+        private StringBuilder data;
+
+        public Callbacks(StringBuilder data) {
+            this.data = data;
+        }
+
+        @Override
+        public int header(byte[] bytes) {
+            if (bytes == null) {
+                Log.d("CURL-J-HEADER", "write null");
+                return -1;
+            }
+            String header = new String(bytes);
+            data.append(header);
+            Log.d("CURL-J-HEADER", header);
+            return bytes.length;
+        }
+
+        @Override
+        public int debug(int type, byte[] bytes) {
+            if (bytes == null) {
+                Log.d("CURL-J-DEBUG", CURLINFO[type] + ": write null");
+                return 0;
+            }
+            if (type == CURLINFO_TEXT) {
+                Log.d("CURL-J-DEBUG", CURLINFO[type] + ": " + new String(bytes));
+            }
+            return 0;
+        }
+
+        @Override
+        public int xferinfo(long dltotal, long dlnow, long ultotal, long ulnow) {
+            return 0;
+        }
+    }
+
     public static String getURL(String dns, String url) {
         final StringBuilder data = new StringBuilder();
         int curl = curl_init();
@@ -122,6 +190,8 @@ public class CurlDemo extends Activity implements OnClickListener {
         if (0 == curl) {
             return "curl_init failed";
         }
+
+        Callback callback = new Callbacks(data);
 
         curl_setopt(curl, CURLOPT_URL, url);
         curl_setopt(curl, CURLOPT_HTTPHEADER, Arrays.asList("User-Agent: Curl/Android"));
@@ -131,55 +201,36 @@ public class CurlDemo extends Activity implements OnClickListener {
         // curl_setopt(curl, CURLOPT_HEADER, 1);
 
         // or set CURLOPT_WRITEHEADER to file path
-        curl_setopt(curl, CURLOPT_HEADERFUNCTION, new Curl.Write() {
-            public int callback(byte[] ptr) {
-                if (ptr == null) {
-                    Log.d("CURL-J-HEADER", "write null");
-                    return -1;
-                }
-                String header = new String(ptr);
-                data.append(header);
-                Log.d("CURL-J-HEADER", header);
-                return ptr.length;
-            }
-        });
+        curl_setopt(curl, CURLOPT_HEADERFUNCTION, callback);
 
-        // or set CURLOPT_WRITEDATA to file path
-        curl_setopt(curl, CURLOPT_WRITEFUNCTION, new Curl.Write() {
-            public int callback(byte[] ptr) {
-                if (ptr == null) {
-                    Log.d("CURL-J-WRITE", "write null");
-                    return -1;
-                }
-                String body = new String(ptr);
-                Log.d("CURL-J-WRITE", body);
-                data.append(body);
-                return ptr.length;
+
+        File output = content;
+        try {
+            URL uri = new URL(url);
+            if (InetAddress.getByName(uri.getHost()).isSiteLocalAddress()) {
+                curl_setopt(curl, CURLOPT_POST, 1);
+                NameValuePair[] forms = Arrays.asList(
+                        new Form("curl", "android"),
+                        new Form("content", "@" + content)
+                ).toArray(new NameValuePair[0]);
+                curl_setopt(curl, CURLOPT_HTTPPOST, forms);
+                output = new File(content.getParent(), "post.txt");
             }
-        });
+        } catch (MalformedURLException e) {
+            Log.w("", "invalid url: " + url, e);
+        } catch (UnknownHostException e) {
+            Log.w("", "invalid url: " + url, e);
+        }
+
+        // or set CURLOPT_WRITEFUNCTION to callback
+        curl_setopt(curl, CURLOPT_FILE, output);
 
         // or set CURLOPT_STDERR to file path
-        curl_setopt(curl, CURLOPT_DEBUGFUNCTION, new Curl.Debug() {
-            public int callback(int type, byte[] ptr) {
-                if (ptr == null) {
-                    Log.d("CURL-J-DEBUG", CURLINFO[type] + ": write null");
-                    return 0;
-                }
-                if (type == CURLINFO_TEXT) {
-                    Log.d("CURL-J-DEBUG", CURLINFO[type] + ": " + new String(ptr));
-                }
-                return 0;
-            }
-        });
+        curl_setopt(curl, CURLOPT_DEBUGFUNCTION, callback);
 
         // simple progress function
         curl_setopt(curl, CURLOPT_NOPROGRESS, 0);
-        curl_setopt(curl, CURLOPT_XFERINFOFUNCTION, new Curl.Xferinfo() {
-            @Override
-            public int callback(long dltotal, long dlnow, long ultotal, long ulnow) {
-                return 0;
-            }
-        });
+        curl_setopt(curl, CURLOPT_XFERINFOFUNCTION, callback);
 
         curl_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
 
@@ -203,6 +254,9 @@ public class CurlDemo extends Activity implements OnClickListener {
         if (!curl_perform(curl)) {
             data.append(curl_error(curl));
         } else {
+            data.append("(content: see ");
+            data.append(output);
+            data.append(")");
             data.append("\n=====getinfo=====\n");
             data.append("code: ");
             data.append(curl_getinfo(curl, CURLINFO_RESPONSE_CODE));

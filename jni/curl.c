@@ -1,7 +1,7 @@
 /* vim: set sw=4 ts=4:
  * Author: Liu DongMiao <liudongmiao@gmail.com>
  * Created  : Thu 26 Jul 2012 02:13:55 PM CST
- * Modified : Mon 30 Mar 2015 10:13:30 AM CST
+ * Modified : Mon 30 Mar 2015 04:29:42 PM CST
  *
  * CopyRight (c) 2012, Liu DongMiao, <liudongmiao@gmail.com>.
  * All rights reserved.
@@ -62,6 +62,7 @@ typedef struct {
 	jobject *progress;
 	jobject *xferinfo;
 	struct curl_slist *slists;
+	struct curl_httppost *formpost;
 } jcurl_t;
 
 static JavaVM *jvm;
@@ -466,11 +467,10 @@ static jboolean curl_setopt_slist(JNIEnv *env, jobject clazz, jint handle, jint 
 	count = (*env)->GetArrayLength(env, value);
 
 	for (i = 0; i < count; ++i) {
-		jobject item = (*env)->GetObjectArrayElement(env, value, i);
+		jbyteArray item = (*env)->GetObjectArrayElement(env, value, i);
 		jbyte *data = (*env)->GetByteArrayElements(env, item, NULL);
-		LOGD("%s %d with %s", __FUNCTION__, option, data); 
 		slist = curl_slist_append(slist, (char *)data);
-		(*env)->DeleteLocalRef(env, data);
+		(*env)->ReleaseByteArrayElements(env, item, data, 0);
 		(*env)->DeleteLocalRef(env, item);
 		if (NULL == slist) {
 			return JNI_FALSE;
@@ -786,6 +786,79 @@ static jboolean curl_setopt_callback(JNIEnv *env, jclass clazz, jint handle, jin
 	return JNI_TRUE;
 }
 
+/*
+ * curl_easy_setopt for callback
+ char *
+ */
+static jboolean curl_setopt_httppost(JNIEnv *env, jclass clazz, jint handle, jint option, jobjectArray value)
+{
+	int i, count;
+	jclass class;
+	jmethodID get_name, get_value;
+	struct curl_httppost *formpost = NULL;
+	struct curl_httppost *lastptr = NULL;
+	jcurl_t *jcurl = (jcurl_t *)handle;
+	if (NULL == jcurl) {
+		return JNI_FALSE;
+	}
+
+	switch (option) {
+		case CURLOPT_HTTPPOST:
+			break;
+		default:
+			return JNI_FALSE;
+	}
+
+	class = (*env)->FindClass(env, CLASSNAME "$NameValuePair");
+	if (class == NULL) {
+		LOGE("%s cannot find class: " CLASSNAME "$NameValuePair", __FUNCTION__);
+		return JNI_FALSE;
+	}
+	get_name = get_method_safely(env, class, "getName", "()Ljava/lang/String;");
+	if (get_name == NULL) {
+		LOGE("%s cannot find method getName()Ljava/lang/String;", __FUNCTION__);
+		return JNI_FALSE;
+	}
+	get_value = get_method_safely(env, class, "getValue", "()Ljava/lang/String;");
+	if (get_name == NULL) {
+		LOGE("%s cannot find method getValue()Ljava/lang/String;", __FUNCTION__);
+		return JNI_FALSE;
+	}
+	(*env)->DeleteLocalRef(env, class);
+
+	count = (*env)->GetArrayLength(env, value);
+	for (i = 0; i < count; ++i) {
+		jobject item = (*env)->GetObjectArrayElement(env, value, i);
+		jstring names = (jstring)(*env)->CallObjectMethod(env, item, get_name);
+		jstring values = (jstring)(*env)->CallObjectMethod(env, item, get_value);
+		const char *name = (*env)->GetStringUTFChars(env, names, NULL);
+		const char *value = (*env)->GetStringUTFChars(env, values, NULL);
+		if (name == NULL || value == NULL) {
+		} else if (value[0] == '@') {
+			const char *file = value + 1;
+			curl_formadd(&formpost, &lastptr, CURLFORM_COPYNAME, name, CURLFORM_FILE, file, CURLFORM_END);
+		} else {
+			curl_formadd(&formpost, &lastptr, CURLFORM_COPYNAME, name, CURLFORM_COPYCONTENTS, value, CURLFORM_END);
+		}
+		(*env)->ReleaseStringUTFChars(env, values, value);
+		(*env)->ReleaseStringUTFChars(env, names, name);
+		(*env)->DeleteLocalRef(env, values);
+		(*env)->DeleteLocalRef(env, names);
+		(*env)->DeleteLocalRef(env, item);
+	}
+
+	jcurl->code = curl_easy_setopt(jcurl->curl, option, formpost);
+	if (CURLE_OK != jcurl->code) {
+		curl_formfree(formpost);
+		return JNI_FALSE;
+	}
+
+	jcurl->formpost = formpost;
+
+	return JNI_TRUE;
+}
+
+
 static jboolean curl_perform(JNIEnv *env, jobject clazz, jint handle)
 {
 	jcurl_t *jcurl = (jcurl_t *)handle;
@@ -798,6 +871,11 @@ static jboolean curl_perform(JNIEnv *env, jobject clazz, jint handle)
 	if (NULL != jcurl->slists) {
 		curl_slist_free_all(jcurl->slists);
 		jcurl->slists = NULL;
+	}
+
+	if (NULL != jcurl->formpost) {
+		curl_formfree(jcurl->formpost);
+		jcurl->formpost = NULL;
 	}
 
 	fflush(NULL);
@@ -901,6 +979,7 @@ static jobjectArray dump_slist(JNIEnv *env, struct curl_slist *slist)
 	}
 
 	result = (*env)->NewObjectArray(env, count, class, NULL);
+	(*env)->DeleteLocalRef(env, class);
 	if (result == NULL) {
 		LOGE("cannot create Object[]");
 		return NULL;
@@ -939,6 +1018,7 @@ static jobjectArray dump_certinfo(JNIEnv *env, struct curl_certinfo *certinfo)
 	}
 
 	result = (*env)->NewObjectArray(env, length, class, NULL);
+	(*env)->DeleteLocalRef(env, class);
 	if (result == NULL) {
 		LOGE("cannot create Object[]");
 		return NULL;
@@ -1078,6 +1158,7 @@ static JNINativeMethod methods[] = {
 	{"curl_setopt", "(II[[B)Z", (void *)curl_setopt_slist},
 	{"curl_setopt", "(II[B)Z", (void *)curl_setopt_bytes},
 	{"curl_setopt", "(IILme/piebridge/curl/Curl$Callback;)Z", (void *)curl_setopt_callback},
+	{"curl_setopt", "(II[Lme/piebridge/curl/Curl$NameValuePair;)Z", (void *)curl_setopt_httppost},
 	{"curl_perform", "(I)Z", (void *)curl_perform},
 	{"curl_getinfo_bytes", "(II)[B", (void *)curl_getinfo_bytes},
 	{"curl_getinfo_long", "(II)J", (void *)curl_getinfo_long},
