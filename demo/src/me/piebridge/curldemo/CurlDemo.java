@@ -14,8 +14,10 @@
 package me.piebridge.curldemo;
 
 import static me.piebridge.curl.Curl.*;
-import me.piebridge.curl.Curl;
 
+import java.util.Arrays;
+
+import me.piebridge.curl.Curl;
 import android.app.Activity;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -122,6 +124,7 @@ public class CurlDemo extends Activity implements OnClickListener {
         }
 
         curl_setopt(curl, CURLOPT_URL, url);
+        curl_setopt(curl, CURLOPT_HTTPHEADER, Arrays.asList("User-Agent: Curl/Android"));
         curl_setopt(curl, CURLOPT_VERBOSE, 1);
 
         // CURLOPT_WRITEFUNCTION will have header too if CURLOPT_HEADER is true
@@ -201,6 +204,12 @@ public class CurlDemo extends Activity implements OnClickListener {
             data.append(curl_error(curl));
         } else {
             data.append("\n=====getinfo=====\n");
+            data.append("code: ");
+            data.append(curl_getinfo(curl, CURLINFO_RESPONSE_CODE));
+            data.append("\n");
+            data.append("content-type: ");
+            data.append(curl_getinfo(curl, CURLINFO_CONTENT_TYPE));
+            data.append("\n");
             data.append("total_time: ");
             data.append(curl_getinfo(curl, CURLINFO_TOTAL_TIME));
             data.append("\n");
@@ -218,18 +227,18 @@ public class CurlDemo extends Activity implements OnClickListener {
             data.append("\n");
         }
 
-        String[] cookies = curl_getinfo_list(curl, CURLINFO_COOKIELIST);
+        byte[][] cookies = curl_getinfo_list(curl, CURLINFO_COOKIELIST);
         if (cookies != null) {
-            for (String cookie : cookies) {
-                Log.d("CURL-J-COOKIE", cookie);
+            for (byte[] cookie : cookies) {
+                Log.d("CURL-J-COOKIE", new String(cookie));
             }
         }
 
-        Object[] certinfos = curl_getinfo_certinfo(curl, CURLINFO_CERTINFO);
+        byte[][][] certinfos = curl_getinfo_certinfo(curl, CURLINFO_CERTINFO);
         if (certinfos != null) {
-            for (Object certinfo : certinfos) {
-                for (String cert : (String[]) certinfo) {
-                    Log.d("CURL-J-CERT", cert);
+            for (byte[][] certinfo : certinfos) {
+                for (byte[] cert : certinfo) {
+                    Log.d("CURL-J-CERT", new String(cert));
                 }
             }
         }

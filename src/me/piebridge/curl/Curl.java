@@ -13,12 +13,20 @@
 
 package me.piebridge.curl;
 
+import java.io.File;
+import java.lang.annotation.Documented;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.util.ArrayList;
+import java.util.Collection;
+
 public class Curl {
 
-    private static final int CURLINFO_STRING = 0x100000;
-    private static final int CURLINFO_LONG = 0x200000;
-    private static final int CURLINFO_DOUBLE = 0x300000;
-    private static final int CURLINFO_SLIST = 0x400000;
+    public static final int CURLINFO_STRING = 0x100000;
+    public static final int CURLINFO_LONG = 0x200000;
+    public static final int CURLINFO_DOUBLE = 0x300000;
+    public static final int CURLINFO_SLIST = 0x400000;
+    public static final int CURLINFO_TYPEMASK = 0xf00000;
     public static final int CURLINFO_EFFECTIVE_URL = CURLINFO_STRING + 1;
     public static final int CURLINFO_RESPONSE_CODE = CURLINFO_LONG + 2;
     public static final int CURLINFO_TOTAL_TIME = CURLINFO_DOUBLE + 3;
@@ -61,12 +69,17 @@ public class Curl {
     public static final int CURLINFO_PRIMARY_PORT = CURLINFO_LONG + 40;
     public static final int CURLINFO_LOCAL_IP = CURLINFO_STRING + 41;
     public static final int CURLINFO_LOCAL_PORT = CURLINFO_LONG + 42;
+    @Deprecated @Unsupported
     public static final int CURLINFO_TLS_SESSION = CURLINFO_SLIST + 43;
 
     private static final int CURLOPTTYPE_LONG = 0;
     private static final int CURLOPTTYPE_OBJECTPOINT = 10000;
     private static final int CURLOPTTYPE_FUNCTIONPOINT = 20000;
     private static final int CURLOPTTYPE_OFF_T = 30000;
+    /**
+     * for FILE use {@link #CURLOPT_FILE}
+     */
+    @Deprecated @Unsupported
     public static final int CURLOPT_WRITEDATA = CURLOPTTYPE_OBJECTPOINT + 1;
     public static final int CURLOPT_URL = CURLOPTTYPE_OBJECTPOINT + 2;
     public static final int CURLOPT_PORT = CURLOPTTYPE_LONG + 3;
@@ -74,6 +87,10 @@ public class Curl {
     public static final int CURLOPT_USERPWD = CURLOPTTYPE_OBJECTPOINT + 5;
     public static final int CURLOPT_PROXYUSERPWD = CURLOPTTYPE_OBJECTPOINT + 6;
     public static final int CURLOPT_RANGE = CURLOPTTYPE_OBJECTPOINT + 7;
+    /**
+     * for FILE use {@link #CURLOPT_INFILE}
+     */
+    @Deprecated @Unsupported
     public static final int CURLOPT_READDATA = CURLOPTTYPE_OBJECTPOINT + 9;
     public static final int CURLOPT_ERRORBUFFER = CURLOPTTYPE_OBJECTPOINT + 10;
     public static final int CURLOPT_WRITEFUNCTION = CURLOPTTYPE_FUNCTIONPOINT + 11;
@@ -89,11 +106,16 @@ public class Curl {
     public static final int CURLOPT_RESUME_FROM = CURLOPTTYPE_LONG + 21;
     public static final int CURLOPT_COOKIE = CURLOPTTYPE_OBJECTPOINT + 22;
     public static final int CURLOPT_HTTPHEADER = CURLOPTTYPE_OBJECTPOINT + 23;
+    @Deprecated @Unsupported
     public static final int CURLOPT_HTTPPOST = CURLOPTTYPE_OBJECTPOINT + 24;
     public static final int CURLOPT_SSLCERT = CURLOPTTYPE_OBJECTPOINT + 25;
     public static final int CURLOPT_KEYPASSWD = CURLOPTTYPE_OBJECTPOINT + 26;
     public static final int CURLOPT_CRLF = CURLOPTTYPE_LONG + 27;
     public static final int CURLOPT_QUOTE = CURLOPTTYPE_OBJECTPOINT + 28;
+    /**
+     * for FILE use {@link #CURLOPT_WRITEHEADER}
+     */
+    @Deprecated @Unsupported
     public static final int CURLOPT_HEADERDATA = CURLOPTTYPE_OBJECTPOINT + 29;
     public static final int CURLOPT_COOKIEFILE = CURLOPTTYPE_OBJECTPOINT + 31;
     public static final int CURLOPT_SSLVERSION = CURLOPTTYPE_LONG + 32;
@@ -102,7 +124,9 @@ public class Curl {
     public static final int CURLOPT_CUSTOMREQUEST = CURLOPTTYPE_OBJECTPOINT + 36;
     public static final int CURLOPT_STDERR = CURLOPTTYPE_OBJECTPOINT + 37;
     public static final int CURLOPT_POSTQUOTE = CURLOPTTYPE_OBJECTPOINT + 39;
-    @Deprecated
+    /**
+     * @deprecated
+     */
     public static final int CURLOPT_OBSOLETE40 = CURLOPTTYPE_OBJECTPOINT + 40;
     public static final int CURLOPT_VERBOSE = CURLOPTTYPE_LONG + 41;
     public static final int CURLOPT_HEADER = CURLOPTTYPE_LONG + 42;
@@ -118,11 +142,12 @@ public class Curl {
     public static final int CURLOPT_TRANSFERTEXT = CURLOPTTYPE_LONG + 53;
     public static final int CURLOPT_PUT = CURLOPTTYPE_LONG + 54;
     /**
-     * @deprecated by CURLOPT_XFERINFOFUNCTION
+     * @deprecated use {@link #CURLOPT_XFERINFOFUNCTION}
      */
-    @Deprecated
     public static final int CURLOPT_PROGRESSFUNCTION = CURLOPTTYPE_FUNCTIONPOINT + 56;
+    @Deprecated @Unsupported
     public static final int CURLOPT_PROGRESSDATA = CURLOPTTYPE_OBJECTPOINT + 57;
+    @Deprecated @Unsupported
     public static final int CURLOPT_XFERINFODATA = CURLOPT_PROGRESSDATA;
     public static final int CURLOPT_AUTOREFERER = CURLOPTTYPE_LONG + 58;
     public static final int CURLOPT_PROXYPORT = CURLOPTTYPE_LONG + 59;
@@ -136,7 +161,9 @@ public class Curl {
     public static final int CURLOPT_FILETIME = CURLOPTTYPE_LONG + 69;
     public static final int CURLOPT_TELNETOPTIONS = CURLOPTTYPE_OBJECTPOINT + 70;
     public static final int CURLOPT_MAXCONNECTS = CURLOPTTYPE_LONG + 71;
-    @Deprecated
+    /**
+     * @deprecated
+     */
     public static final int CURLOPT_OBSOLETE72 = CURLOPTTYPE_LONG + 72;
     public static final int CURLOPT_FRESH_CONNECT = CURLOPTTYPE_LONG + 74;
     public static final int CURLOPT_FORBID_REUSE = CURLOPTTYPE_LONG + 75;
@@ -159,11 +186,13 @@ public class Curl {
     public static final int CURLOPT_DNS_CACHE_TIMEOUT = CURLOPTTYPE_LONG + 92;
     public static final int CURLOPT_PREQUOTE = CURLOPTTYPE_OBJECTPOINT + 93;
     public static final int CURLOPT_DEBUGFUNCTION = CURLOPTTYPE_FUNCTIONPOINT + 94;
+    @Deprecated @Unsupported
     public static final int CURLOPT_DEBUGDATA = CURLOPTTYPE_OBJECTPOINT + 95;
     public static final int CURLOPT_COOKIESESSION = CURLOPTTYPE_LONG + 96;
     public static final int CURLOPT_CAPATH = CURLOPTTYPE_OBJECTPOINT + 97;
     public static final int CURLOPT_BUFFERSIZE = CURLOPTTYPE_LONG + 98;
     public static final int CURLOPT_NOSIGNAL = CURLOPTTYPE_LONG + 99;
+    @Deprecated @Unsupported
     public static final int CURLOPT_SHARE = CURLOPTTYPE_OBJECTPOINT + 100;
     public static final int CURLOPT_PROXYTYPE = CURLOPTTYPE_LONG + 101;
     public static final int CURLOPT_ACCEPT_ENCODING = CURLOPTTYPE_OBJECTPOINT + 102;
@@ -172,7 +201,9 @@ public class Curl {
     public static final int CURLOPT_UNRESTRICTED_AUTH = CURLOPTTYPE_LONG + 105;
     public static final int CURLOPT_FTP_USE_EPRT = CURLOPTTYPE_LONG + 106;
     public static final int CURLOPT_HTTPAUTH = CURLOPTTYPE_LONG + 107;
+    @Deprecated @Unsupported
     public static final int CURLOPT_SSL_CTX_FUNCTION = CURLOPTTYPE_FUNCTIONPOINT + 108;
+    @Deprecated @Unsupported
     public static final int CURLOPT_SSL_CTX_DATA = CURLOPTTYPE_OBJECTPOINT + 109;
     public static final int CURLOPT_FTP_CREATE_MISSING_DIRS = CURLOPTTYPE_LONG + 110;
     public static final int CURLOPT_PROXYAUTH = CURLOPTTYPE_LONG + 111;
@@ -188,7 +219,9 @@ public class Curl {
     public static final int CURLOPT_POSTFIELDSIZE_LARGE = CURLOPTTYPE_OFF_T + 120;
     public static final int CURLOPT_TCP_NODELAY = CURLOPTTYPE_LONG + 121;
     public static final int CURLOPT_FTPSSLAUTH = CURLOPTTYPE_LONG + 129;
+    @Deprecated @Unsupported
     public static final int CURLOPT_IOCTLFUNCTION = CURLOPTTYPE_FUNCTIONPOINT + 130;
+    @Deprecated @Unsupported
     public static final int CURLOPT_IOCTLDATA = CURLOPTTYPE_OBJECTPOINT + 131;
     public static final int CURLOPT_FTP_ACCOUNT = CURLOPTTYPE_OBJECTPOINT + 134;
     public static final int CURLOPT_COOKIELIST = CURLOPTTYPE_OBJECTPOINT + 135;
@@ -198,13 +231,18 @@ public class Curl {
     public static final int CURLOPT_LOCALPORT = CURLOPTTYPE_LONG + 139;
     public static final int CURLOPT_LOCALPORTRANGE = CURLOPTTYPE_LONG + 140;
     public static final int CURLOPT_CONNECT_ONLY = CURLOPTTYPE_LONG + 141;
+    @Deprecated @Unsupported
     public static final int CURLOPT_CONV_FROM_NETWORK_FUNCTION = CURLOPTTYPE_FUNCTIONPOINT + 142;
+    @Deprecated @Unsupported
     public static final int CURLOPT_CONV_TO_NETWORK_FUNCTION = CURLOPTTYPE_FUNCTIONPOINT + 143;
+    @Deprecated @Unsupported
     public static final int CURLOPT_CONV_FROM_UTF8_FUNCTION = CURLOPTTYPE_FUNCTIONPOINT + 144;
     public static final int CURLOPT_MAX_SEND_SPEED_LARGE = CURLOPTTYPE_OFF_T + 145;
     public static final int CURLOPT_MAX_RECV_SPEED_LARGE = CURLOPTTYPE_OFF_T + 146;
     public static final int CURLOPT_FTP_ALTERNATIVE_TO_USER = CURLOPTTYPE_OBJECTPOINT + 147;
+    @Deprecated @Unsupported
     public static final int CURLOPT_SOCKOPTFUNCTION = CURLOPTTYPE_FUNCTIONPOINT + 148;
+    @Deprecated @Unsupported
     public static final int CURLOPT_SOCKOPTDATA = CURLOPTTYPE_OBJECTPOINT + 149;
     public static final int CURLOPT_SSL_SESSIONID_CACHE = CURLOPTTYPE_LONG + 150;
     public static final int CURLOPT_SSH_AUTH_TYPES = CURLOPTTYPE_LONG + 151;
@@ -219,11 +257,15 @@ public class Curl {
     public static final int CURLOPT_NEW_DIRECTORY_PERMS = CURLOPTTYPE_LONG + 160;
     public static final int CURLOPT_POSTREDIR = CURLOPTTYPE_LONG + 161;
     public static final int CURLOPT_SSH_HOST_PUBLIC_KEY_MD5 = CURLOPTTYPE_OBJECTPOINT + 162;
+    @Deprecated @Unsupported
     public static final int CURLOPT_OPENSOCKETFUNCTION = CURLOPTTYPE_FUNCTIONPOINT + 163;
+    @Deprecated @Unsupported
     public static final int CURLOPT_OPENSOCKETDATA = CURLOPTTYPE_OBJECTPOINT + 164;
     public static final int CURLOPT_COPYPOSTFIELDS = CURLOPTTYPE_OBJECTPOINT + 165;
     public static final int CURLOPT_PROXY_TRANSFER_MODE = CURLOPTTYPE_LONG + 166;
+    @Deprecated @Unsupported
     public static final int CURLOPT_SEEKFUNCTION = CURLOPTTYPE_FUNCTIONPOINT + 167;
+    @Deprecated @Unsupported
     public static final int CURLOPT_SEEKDATA = CURLOPTTYPE_OBJECTPOINT + 168;
     public static final int CURLOPT_CRLFILE = CURLOPTTYPE_OBJECTPOINT + 169;
     public static final int CURLOPT_ISSUERCERT = CURLOPTTYPE_OBJECTPOINT + 170;
@@ -240,7 +282,9 @@ public class Curl {
     public static final int CURLOPT_PROTOCOLS = CURLOPTTYPE_LONG + 181;
     public static final int CURLOPT_REDIR_PROTOCOLS = CURLOPTTYPE_LONG + 182;
     public static final int CURLOPT_SSH_KNOWNHOSTS = CURLOPTTYPE_OBJECTPOINT + 183;
+    @Deprecated @Unsupported
     public static final int CURLOPT_SSH_KEYFUNCTION = CURLOPTTYPE_FUNCTIONPOINT + 184;
+    @Deprecated @Unsupported
     public static final int CURLOPT_SSH_KEYDATA = CURLOPTTYPE_OBJECTPOINT + 185;
     public static final int CURLOPT_MAIL_FROM = CURLOPTTYPE_OBJECTPOINT + 186;
     public static final int CURLOPT_MAIL_RCPT = CURLOPTTYPE_OBJECTPOINT + 187;
@@ -251,20 +295,29 @@ public class Curl {
     public static final int CURLOPT_RTSP_TRANSPORT = CURLOPTTYPE_OBJECTPOINT + 192;
     public static final int CURLOPT_RTSP_CLIENT_CSEQ = CURLOPTTYPE_LONG + 193;
     public static final int CURLOPT_RTSP_SERVER_CSEQ = CURLOPTTYPE_LONG + 194;
+    @Deprecated @Unsupported
     public static final int CURLOPT_INTERLEAVEDATA = CURLOPTTYPE_OBJECTPOINT + 195;
+    @Deprecated @Unsupported
     public static final int CURLOPT_INTERLEAVEFUNCTION = CURLOPTTYPE_FUNCTIONPOINT + 196;
     public static final int CURLOPT_WILDCARDMATCH = CURLOPTTYPE_LONG + 197;
+    @Deprecated @Unsupported
     public static final int CURLOPT_CHUNK_BGN_FUNCTION = CURLOPTTYPE_FUNCTIONPOINT + 198;
+    @Deprecated @Unsupported
     public static final int CURLOPT_CHUNK_END_FUNCTION = CURLOPTTYPE_FUNCTIONPOINT + 199;
+    @Deprecated @Unsupported
     public static final int CURLOPT_FNMATCH_FUNCTION = CURLOPTTYPE_FUNCTIONPOINT + 200;
+    @Deprecated @Unsupported
     public static final int CURLOPT_CHUNK_DATA = CURLOPTTYPE_OBJECTPOINT + 201;
+    @Deprecated @Unsupported
     public static final int CURLOPT_FNMATCH_DATA = CURLOPTTYPE_OBJECTPOINT + 202;
     public static final int CURLOPT_RESOLVE = CURLOPTTYPE_OBJECTPOINT + 203;
     public static final int CURLOPT_TLSAUTH_USERNAME = CURLOPTTYPE_OBJECTPOINT + 204;
     public static final int CURLOPT_TLSAUTH_PASSWORD = CURLOPTTYPE_OBJECTPOINT + 205;
     public static final int CURLOPT_TLSAUTH_TYPE = CURLOPTTYPE_OBJECTPOINT + 206;
     public static final int CURLOPT_TRANSFER_ENCODING = CURLOPTTYPE_LONG + 207;
+    @Deprecated @Unsupported
     public static final int CURLOPT_CLOSESOCKETFUNCTION = CURLOPTTYPE_FUNCTIONPOINT + 208;
+    @Deprecated @Unsupported
     public static final int CURLOPT_CLOSESOCKETDATA = CURLOPTTYPE_OBJECTPOINT + 209;
     public static final int CURLOPT_GSSAPI_DELEGATION = CURLOPTTYPE_LONG + 210;
     public static final int CURLOPT_DNS_SERVERS = CURLOPTTYPE_OBJECTPOINT + 211;
@@ -287,31 +340,50 @@ public class Curl {
     public static final int CURLOPT_PROXYHEADER = CURLOPTTYPE_OBJECTPOINT + 228;
     public static final int CURLOPT_HEADEROPT = CURLOPTTYPE_LONG + 229;
     public static final int CURLOPT_PINNEDPUBLICKEY = CURLOPTTYPE_OBJECTPOINT + 230;
-    @Deprecated
+    public static final int CURLOPT_UNIX_SOCKET_PATH = CURLOPTTYPE_OBJECTPOINT + 231;
+    public static final int CURLOPT_SSL_VERIFYSTATUS = CURLOPTTYPE_LONG + 232;
+    /**
+     * @deprecated use {@link #CURLOPT_ACCEPT_ENCODING}
+     */
     public static final int CURLOPT_ENCODING = CURLOPT_ACCEPT_ENCODING;
-    @Deprecated
     public static final int CURLOPT_FILE = CURLOPT_WRITEDATA;
-    @Deprecated
     public static final int CURLOPT_INFILE = CURLOPT_READDATA;
-    @Deprecated
     public static final int CURLOPT_WRITEHEADER = CURLOPT_HEADERDATA;
-    @Deprecated
+    /**
+     * @deprecated use {@link #CURLOPT_OBSOLETE40}
+     */
     public static final int CURLOPT_WRITEINFO = CURLOPT_OBSOLETE40;
-    @Deprecated
+    /**
+     * @deprecated use {@link #CURLOPT_OBSOLETE72}
+     */
     public static final int CURLOPT_CLOSEPOLICY = CURLOPT_OBSOLETE72;
-    @Deprecated
+    /**
+     * @deprecated use {@link #CURLOPT_POSTREDIR}
+     */
     public static final int CURLOPT_POST301 = CURLOPT_POSTREDIR;
-    @Deprecated
+    /**
+     * @deprecated use {@link #CURLOPT_KEYPASSWD}
+     */
     public static final int CURLOPT_SSLKEYPASSWD = CURLOPT_KEYPASSWD;
-    @Deprecated
+    /**
+     * @deprecated use {@link #CURLOPT_APPEND}
+     */
     public static final int CURLOPT_FTPAPPEND = CURLOPT_APPEND;
-    @Deprecated
+    /**
+     * @deprecated use {@link #CURLOPT_DIRLISTONLY}
+     */
     public static final int CURLOPT_FTPLISTONLY = CURLOPT_DIRLISTONLY;
-    @Deprecated
+    /**
+     * @deprecated use {@link #CURLOPT_USE_SSL}
+     */
     public static final int CURLOPT_FTP_SSL = CURLOPT_USE_SSL;
-    @Deprecated
+    /**
+     * @deprecated use {@link #CURLOPT_KEYPASSWD}
+     */
     public static final int CURLOPT_SSLCERTPASSWD = CURLOPT_KEYPASSWD;
-    @Deprecated
+    /**
+     * @deprecated use {@link #CURLOPT_KRBLEVEL}
+     */
     public static final int CURLOPT_KRB4LEVEL = CURLOPT_KRBLEVEL;
     public static final int CURLOPT_RTSPHEADER = CURLOPT_HTTPHEADER;
 
@@ -325,49 +397,176 @@ public class Curl {
 
     public static native String curl_error(int ucrl);
 
-    // curl_easy_setopt with long, unsigned long, curl_off_t
+    /**
+     * curl_easy_setopt with long, curl_off_t
+     * @param curl
+     * @param option
+     * @param value
+     * @return true if success, false if fail
+     */
     public static native boolean curl_setopt(int curl, int option, long value);
 
-    // curl_easy_setopt with char *
+    /**
+     * for FILE, use {@link #curl_setopt(int, int, File)}<br>
+     * for char *, use {@link #curl_setopt(int, int, byte[])}
+     * @param curl
+     * @param option
+     * @param value
+     * @return true if success, false if fail
+     * @see #curl_setopt(int, int, File)
+     * @see #curl_setopt(int, int, byte[])
+     */
     public static native boolean curl_setopt(int curl, int option, String value);
 
-    // curl_easy_setopt with curl_slit
-    public static native boolean curl_setopt(int curl, int option, String[] value);
+    /**
+     * @deprecated use {@link #curl_setopt(int, int, byte[][])}
+     * @param curl
+     * @param option
+     * @param value
+     * @return true if success, false if fail
+     */
+    public static boolean curl_setopt(int curl, int option, String[] value) {
+        Collection<byte[]> bytes = new ArrayList<byte[]>(value.length);
+        for (String v : value) {
+            bytes.add(v.getBytes());
+        }
+        return curl_setopt(curl, option, bytes.toArray(new byte[0][0]));
+    }
 
-    // curl_easy_setopt with void *
+    public static boolean curl_setopt(int curl, int option, File value) {
+        if (value == null) {
+            throw new NullPointerException();
+        }
+        switch (option) {
+        case CURLOPT_FILE:
+        case CURLOPT_INFILE:
+        case CURLOPT_WRITEHEADER:
+        case CURLOPT_STDERR:
+            return curl_setopt(curl, option, value.getAbsolutePath());
+        default:
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    /**
+     * @param curl
+     * @param option
+     * @param value
+     * @return true if success, false if fail
+     */
+    public static boolean curl_setopt(int curl, int option, Collection<String> value) {
+        Collection<byte[]> bytes = new ArrayList<byte[]>(value.size());
+        for (String v : value) {
+            bytes.add(v.getBytes());
+        }
+        return curl_setopt(curl, option, bytes.toArray(new byte[0][0]));
+    }
+
+    /**
+     * curl_easy_setopt with struct curl_slist *
+     * @param curl
+     * @param option
+     * @param value
+     * @return true if success, false if fail
+     */
+    public static native boolean curl_setopt(int curl, int option, byte[][] value);
+
+    /**
+     * curl_easy_setopt with char *
+     * @param curl
+     * @param option
+     * @param value
+     * @return true if success, false if fail
+     */
     public static native boolean curl_setopt(int curl, int option, byte[] value);
 
-    // curl_easy_setopt with callback, Object is a class implements callback
-    public static native boolean curl_setopt(int curl, int option, Object value);
+    /**
+     * curl_easy_setopt with callback
+     * @param curl
+     * @param option
+     * @param value
+     * @return true if success, false if fail
+     */
+    public static native boolean curl_setopt(int curl, int option, Callback value);
 
     public static native boolean curl_perform(int curl);
 
-    // curl_easy_getinfo with long
+    /**
+     * curl_easy_getinfo with long
+     * @param curl
+     * @param info
+     * @return long value
+     */
     public static native long curl_getinfo_long(int curl, int info);
 
-    // curl_easy_getinfo with double
+    /**
+     * curl_easy_getinfo with double
+     * @param curl
+     * @param info
+     * @return double value
+     */
     public static native double curl_getinfo_double(int curl, int info);
 
-    // curl_easy_getinfo with curl_slist
-    public static native String[] curl_getinfo_list(int curl, int info);
+    /**
+     * curl_easy_getinfo with struct curl_slist
+     * @param curl
+     * @param info
+     * @return double value
+     */
+    public static native byte[][] curl_getinfo_list(int curl, int info);
 
-    // curl_easy_getinfo with certinfo, certinfo is set of curl_slist
-    // Object[] is equal String[][]
-    public static native Object[] curl_getinfo_certinfo(int curl, int info);
+    /**
+     * curl_easy_getinfo with certinfo
+     * @param curl
+     * @param info
+     * @return double value
+     */
+    public static native byte[][][] curl_getinfo_certinfo(int curl, int info);
 
-    // curl_easy_getinfo with string, including long and double
-    public static native String curl_getinfo(int curl, int info);
+    public static String curl_getinfo(int curl, int info) {
+        int type = CURLINFO_TYPEMASK & (int) info;
+        switch (type) {
+        case CURLINFO_STRING:
+            return new String(curl_getinfo_bytes(curl, info));
+        case CURLINFO_LONG:
+            return String.valueOf(curl_getinfo_long(curl, info));
+        case CURLINFO_DOUBLE:
+            return String.valueOf(curl_getinfo_double(curl, info));
+        case CURLINFO_SLIST:
+            throw new UnsupportedOperationException("cannot convert byte[][] to string");
+        default:
+            throw new UnsupportedOperationException("unsupported option");
+        }
+    }
+
+    /**
+     * curl_easy_getinfo with char *
+     * @param curl
+     * @param info
+     * @return double value
+     */
+    public static native byte[] curl_getinfo_bytes(int curl, int info);
 
     public static native void curl_cleanup(int curl);
 
     public static native String curl_version();
+
+    @Documented
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface Unsupported {
+
+    }
+
+    public interface Callback {
+
+    }
 
     /*
      * CURLOPT_WRITEFUNCTION
      * CURLOPT_HEADERFUNCTION
      * size_t function(void *ptr, size_t size, size_t nmemb, void *userdata);
      */
-    public interface Write {
+    public interface Write extends Callback {
         public int callback(byte[] ptr);
     }
 
@@ -375,7 +574,7 @@ public class Curl {
      * CURLOPT_READFUNCTION
      * size_t function(void *ptr, size_t size, size_t nmemb, void *userdata);
      */
-    public interface Read {
+    public interface Read extends Callback {
         public int callback(byte[] ptr);
     }
 
@@ -383,7 +582,7 @@ public class Curl {
      * CURLOPT_DEBUGFUNCTION
      * int curl_debug_callback(CURL *, curl_infotype, char*, size_t, void *);
      */
-    public interface Debug {
+    public interface Debug extends Callback {
         public int callback(int type, byte[] ptr);
 
         public final int CURLINFO_TEXT = 0;
@@ -411,7 +610,7 @@ public class Curl {
      * typedef int (*curl_progress_callback)(void*clientp, double dltotal, double dlnow, double ultotal, double ulnow);
      */
     @Deprecated
-    public interface Progress {
+    public interface Progress extends Callback {
         public int callback(double dltotal, double dlnow, double ultotal, double ulnow);
     }
 
@@ -419,7 +618,7 @@ public class Curl {
      * CURLOPT_XFERINFOFUNCTION
      * typedef int (*curl_xferinfo_callback)(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow);
      */
-    public interface Xferinfo {
+    public interface Xferinfo extends Callback {
         public int callback(long dltotal, long dlnow, long ultotal, long ulnow);
     }
 
