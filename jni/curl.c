@@ -1,7 +1,7 @@
 /* vim: set sw=4 ts=4:
  * Author: Liu DongMiao <liudongmiao@gmail.com>
  * Created  : Thu 26 Jul 2012 02:13:55 PM CST
- * Modified : Mon 30 Mar 2015 04:29:42 PM CST
+ * Modified : Mon 30 Mar 2015 06:28:09 PM CST
  *
  * CopyRight (c) 2012, Liu DongMiao, <liudongmiao@gmail.com>.
  * All rights reserved.
@@ -793,8 +793,8 @@ static jboolean curl_setopt_callback(JNIEnv *env, jclass clazz, jint handle, jin
 static jboolean curl_setopt_httppost(JNIEnv *env, jclass clazz, jint handle, jint option, jobjectArray value)
 {
 	int i, count;
-	jclass class;
-	jmethodID get_name, get_value;
+	jclass class, class_extra;
+	jmethodID get_name, get_value, get_file_name, get_content_type;
 	struct curl_httppost *formpost = NULL;
 	struct curl_httppost *lastptr = NULL;
 	jcurl_t *jcurl = (jcurl_t *)handle;
@@ -814,26 +814,40 @@ static jboolean curl_setopt_httppost(JNIEnv *env, jclass clazz, jint handle, jin
 		LOGE("%s cannot find class: " CLASSNAME "$NameValuePair", __FUNCTION__);
 		return JNI_FALSE;
 	}
+	class_extra = (*env)->FindClass(env, CLASSNAME "$FileNameValuePair");
+	if (class_extra == NULL) {
+		LOGE("%s cannot find class: " CLASSNAME "$FileNameValuePair", __FUNCTION__);
+		return JNI_FALSE;
+	}
 	get_name = get_method_safely(env, class, "getName", "()Ljava/lang/String;");
-	if (get_name == NULL) {
-		LOGE("%s cannot find method getName()Ljava/lang/String;", __FUNCTION__);
-		return JNI_FALSE;
-	}
 	get_value = get_method_safely(env, class, "getValue", "()Ljava/lang/String;");
-	if (get_name == NULL) {
-		LOGE("%s cannot find method getValue()Ljava/lang/String;", __FUNCTION__);
-		return JNI_FALSE;
-	}
-	(*env)->DeleteLocalRef(env, class);
+	get_file_name = get_method_safely(env, class_extra, "getFileName", "()Ljava/lang/String;");
+	get_content_type = get_method_safely(env, class_extra, "getContentType", "()Ljava/lang/String;");
 
 	count = (*env)->GetArrayLength(env, value);
 	for (i = 0; i < count; ++i) {
 		jobject item = (*env)->GetObjectArrayElement(env, value, i);
-		jstring names = (jstring)(*env)->CallObjectMethod(env, item, get_name);
-		jstring values = (jstring)(*env)->CallObjectMethod(env, item, get_value);
+		jstring names = (*env)->CallObjectMethod(env, item, get_name);
+		jstring values = (*env)->CallObjectMethod(env, item, get_value);
 		const char *name = (*env)->GetStringUTFChars(env, names, NULL);
 		const char *value = (*env)->GetStringUTFChars(env, values, NULL);
 		if (name == NULL || value == NULL) {
+		} else if ((*env)->IsInstanceOf(env, item, class_extra)) {
+			const char *file;
+			jstring filenames = (*env)->CallObjectMethod(env, item, get_file_name);
+			jstring contenttypes = (*env)->CallObjectMethod(env, item, get_content_type);
+			const char *filename = (*env)->GetStringUTFChars(env, filenames, NULL);;
+			const char *contenttype = (*env)->GetStringUTFChars(env, contenttypes, NULL);;
+			if (value[0] == '@') {
+			    file = value + 1;
+			} else {
+			    file = value;
+			}
+			curl_formadd(&formpost, &lastptr, CURLFORM_COPYNAME, name, CURLFORM_FILENAME, filename, CURLFORM_CONTENTTYPE, contenttype, CURLFORM_FILE, file, CURLFORM_END);
+			(*env)->ReleaseStringUTFChars(env, contenttypes, contenttype);
+			(*env)->ReleaseStringUTFChars(env, filenames, filename);
+			(*env)->DeleteLocalRef(env, contenttypes);
+			(*env)->DeleteLocalRef(env, filenames);
 		} else if (value[0] == '@') {
 			const char *file = value + 1;
 			curl_formadd(&formpost, &lastptr, CURLFORM_COPYNAME, name, CURLFORM_FILE, file, CURLFORM_END);
@@ -847,6 +861,8 @@ static jboolean curl_setopt_httppost(JNIEnv *env, jclass clazz, jint handle, jin
 		(*env)->DeleteLocalRef(env, item);
 	}
 
+	(*env)->DeleteLocalRef(env, class);
+	(*env)->DeleteLocalRef(env, class_extra);
 	jcurl->code = curl_easy_setopt(jcurl->curl, option, formpost);
 	if (CURLE_OK != jcurl->code) {
 		curl_formfree(formpost);

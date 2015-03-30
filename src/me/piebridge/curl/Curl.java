@@ -588,7 +588,14 @@ public class Curl {
 
     public interface NameValuePair {
         String getName();
+
         String getValue();
+    }
+
+    public interface FileNameValuePair extends NameValuePair {
+        String getFileName();
+
+        String getContentType();
     }
 
     @Deprecated

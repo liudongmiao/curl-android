@@ -126,6 +126,7 @@ public class CurlDemo extends Activity implements OnClickListener {
 
     static class Form implements NameValuePair {
 
+        private static final String FILE_PREFIX = "@";
         private String name;
         private String value;
 
@@ -142,6 +143,28 @@ public class CurlDemo extends Activity implements OnClickListener {
         @Override
         public String getValue() {
             return this.value;
+        }
+    }
+
+    static class FileForm extends Form implements FileNameValuePair {
+
+        private String fileName;
+        private String contentType;
+
+        public FileForm(String name, File value, String fileName, String contentType) {
+            super(name, value.getAbsolutePath());
+            this.fileName = fileName;
+            this.contentType = contentType;
+        }
+
+        @Override
+        public String getFileName() {
+            return this.fileName;
+        }
+
+        @Override
+        public String getContentType() {
+            return this.contentType;
         }
     }
 
@@ -211,7 +234,8 @@ public class CurlDemo extends Activity implements OnClickListener {
                 curl_setopt(curl, CURLOPT_POST, 1);
                 NameValuePair[] forms = Arrays.asList(
                         new Form("curl", "android"),
-                        new Form("content", "@" + content)
+                        new Form("content", Form.FILE_PREFIX + content.getAbsolutePath()),
+                        new FileForm("image", content, "image.png", "image/png")
                 ).toArray(new NameValuePair[0]);
                 curl_setopt(curl, CURLOPT_HTTPPOST, forms);
                 output = new File(content.getParent(), "post.txt");
