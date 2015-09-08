@@ -1,6 +1,6 @@
 LOCAL_PATH:= $(call my-dir)
 
-CFLAGS := -Wpointer-arith -Wwrite-strings -Wunused -Winline -Wnested-externs -Wmissing-declarations -Wmissing-prototypes -Wno-long-long -Wfloat-equal -Wno-multichar -Wsign-compare -Wno-format-nonliteral -Wendif-labels -Wstrict-prototypes -Wdeclaration-after-statement -Wno-system-headers -DHAVE_CONFIG_H
+CFLAGS := -Wpointer-arith -Wwrite-strings -Wunused -Winline -Wmissing-declarations -Wmissing-prototypes -Wno-long-long -Wfloat-equal -Wno-multichar -Wsign-compare -Wno-format-nonliteral -Wendif-labels -Wstrict-prototypes -Wdeclaration-after-statement -Wno-system-headers -DHAVE_CONFIG_H
 
 include $(CLEAR_VARS)
 include $(LOCAL_PATH)/curl/lib/Makefile.inc
@@ -31,4 +31,5 @@ LOCAL_STATIC_LIBRARIES := static-curl static-ares
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/curl/include $(LOCAL_PATH)/curl/lib
 LOCAL_CFLAGS += -Wall
 LOCAL_LDFLAGS += -llog -lssl -lcrypto -lz -L$(ANDROID_SOURCE)/out/target/product/generic/system/lib
+LOCAL_LDFLAGS += -fuse-ld=bfd
 include $(BUILD_SHARED_LIBRARY)

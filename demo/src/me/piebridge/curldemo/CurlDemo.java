@@ -239,20 +239,21 @@ public class CurlDemo extends Activity implements OnClickListener {
     }
 
     private static void dumpCookiesIfNeeded(int curl) {
-        byte[][] cookies = curl_getinfo_list(curl, CURLINFO_COOKIELIST);
+        Object[] cookies = curl_getinfo_list(curl, CURLINFO_COOKIELIST);
         if (cookies != null) {
-            for (byte[] cookie : cookies) {
-                Log.d("CURL-J-COOKIE", new String(cookie));
+            for (Object cookie : cookies) {
+                Log.d("CURL-J-COOKIE", new String((byte[]) cookie));
             }
         }
     }
 
     private static void dumpCertsIfNeeded(int curl) {
-        byte[][][] certinfos = curl_getinfo_certinfo(curl, CURLINFO_CERTINFO);
+        Object[] certinfos = curl_getinfo_certinfo(curl, CURLINFO_CERTINFO);
         if (certinfos != null) {
-            for (byte[][] certinfo : certinfos) {
-                for (byte[] cert : certinfo) {
-                    Log.d("CURL-J-CERT", new String(cert));
+            for (Object certinfo : certinfos) {
+                Object[] certs = (Object[]) certinfo;
+                for (Object cert : certs) {
+                    Log.d("CURL-J-CERT", new String((byte[]) cert));
                 }
             }
         }

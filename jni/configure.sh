@@ -22,7 +22,7 @@ OPENSSL_PREFIX=$ANDROID_SOURCE/external/openssl
 # the path of libcrypto.so libssl.so, can get it from /system/lib
 OUT_LIBDIR=$ANDROID_SOURCE/out/target/product/generic/system/lib
 
-CURL_VERSION=7.41.0
+CURL_VERSION=7.44.0
 C_ARES_VERSION=1.10.0
 CURL_EXTRA="--disable-file --disable-ldap --disable-ldaps --disable-rtsp --disable-proxy --disable-dict --disable-telnet --disable-tftp --disable-pop3 --disable-imap --disable-smtp --disable-gopher --disable-sspi"
 

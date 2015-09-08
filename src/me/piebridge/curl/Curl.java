@@ -670,17 +670,17 @@ public class Curl {
      * curl_easy_getinfo with struct curl_slist
      * @param curl
      * @param info
-     * @return double value
+     * @return byte[][] value
      */
-    public static native byte[][] curl_getinfo_list(int curl, int info); // NOSONAR
+    public static native Object[] curl_getinfo_list(int curl, int info); // NOSONAR
 
     /**
      * curl_easy_getinfo with certinfo
      * @param curl
      * @param info
-     * @return double value
+     * @return byte[][][] value
      */
-    public static native byte[][][] curl_getinfo_certinfo(int curl, int info); // NOSONAR
+    public static native Object[] curl_getinfo_certinfo(int curl, int info); // NOSONAR
 
     public static String curl_getinfo(int curl, int info) { // NOSONAR
         int type = CURLINFO_TYPEMASK & (int) info;

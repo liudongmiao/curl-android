@@ -1,7 +1,7 @@
 /* vim: set sw=4 ts=4:
  * Author: Liu DongMiao <liudongmiao@gmail.com>
  * Created  : Thu 26 Jul 2012 02:13:55 PM CST
- * Modified : Tue 31 Mar 2015 07:44:25 AM CST
+ * Modified : Tue 08 Sep 2015 09:35:03 PM CST
  *
  * CopyRight (c) 2012, Liu DongMiao, <liudongmiao@gmail.com>.
  * All rights reserved.
@@ -1333,8 +1333,8 @@ static JNINativeMethod methods[] = {
 	{"curl_getinfo_bytes", "(II)[B", (void *)curl_getinfo_bytes},
 	{"curl_getinfo_long", "(II)J", (void *)curl_getinfo_long},
 	{"curl_getinfo_double", "(II)D", (void *)curl_getinfo_double},
-	{"curl_getinfo_list", "(II)[[B", (void *)curl_getinfo_slist},
-	{"curl_getinfo_certinfo", "(II)[[[B", (void *)curl_getinfo_slist},
+	{"curl_getinfo_list", "(II)[Ljava/lang/Object;", (void *)curl_getinfo_slist},
+	{"curl_getinfo_certinfo", "(II)[Ljava/lang/Object;", (void *)curl_getinfo_slist},
 	{"curl_cleanup", "(I)V", (void *)curl_cleanup},
 	{"curl_errno", "(I)I", (void *)curl_errno},
 	{"curl_error", "(I)Ljava/lang/String;", (void *)curl_error},
